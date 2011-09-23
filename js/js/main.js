@@ -1,19 +1,5 @@
-var con;
-var range = 6000;
-var range2 = range / 2;
-var stars = [];
-var matrix = Matrix.IDENTITY;
-var coords;
-var coordsArray = [];
-var center = Vector.ZERO;
-var zoom = 1;
-var cx, cy;
-var canvas;
-var box;
 
-var imageData;
-var current;
-var timer;
+var map;
 
 CanvasRenderingContext2D.prototype.resetTransform = function() {
 	this.setTransform(1, 0, 0, 1, 0, 0);
@@ -26,177 +12,16 @@ CanvasRenderingContext2D.prototype.clear = function() {
 	this.restore();
 }
 
-window.onload = function() {
-	box = document.getElementById('box');
-	canvas = document.getElementById('planets');
-	
-	con = canvas.getContext('2d');
-	
-	console.log('start');
-	createMap();
-	drawMap(0, 0, center, zoom);
-	endMoveMap();
-//	timer();
-	
-	cx = canvas.offsetLeft;
-	cy = canvas.offsetTop;
-	
-	canvas.addEventListener('mousedown', beginMoveMap, false);
-	canvas.addEventListener('mousemove', overMap, false);
-	canvas.addEventListener('mousewheel', wheelMap, false);
-};
-
-function Map(element, size) {
-	this.element = element;
-	this.context = element.getContext('2d');
-	this.matrix = null;
-	this.data = null;
-}
-
-Map.prototype.reset = function() {
-	this.context.clear();
-	this.data = null;
-	this.matrix = null;
-}
-
-Map.prototype.save = function() {
-	this.context.save();
-	this.context.reset();
-	this.data = this.context.getImageData(0, 0, element.width, element.height);
-	this.context.restore();
-}
-
-Map.prototype.restore = function() {
-	if (this.data) {
-		this.context.save();
-		this.context.reset();
-		this.context.putImageData(this.data, 0, 0);
-		this.context.restore();
-	}
-}
-
-function wheelMap(e) {
-	var delta = e.wheelDelta / 120;
-	var oldZoom = zoom;
-	
-	if (delta > 5)
-		delta = 5;
-	
-	zoom -= delta / 50;
-	if (zoom < 0.05)
-		zoom = 0.05;
-	
-	if (zoom > 1.5)
-		zoom = 1.5;
-	
-	if (current && center != current.planet) {
-		if (oldZoom > zoom) {
-			var cp = current.planet.sub(center);
-			var step = cp.normalize(range2 * (oldZoom - zoom));
-			
-			if (step.abs() > cp.abs()) {
-				center = current.planet;
-			} else {			
-				center = center.add(step);
-			}
-		} 
-	}
-	
-	if (zoom >= 1) {
-		center = Vector.ZERO;
-	} else if (center.abs() + range2 * zoom > range2) {
-		center = center.normalize((1 - zoom) * range2);
-	}
-	
-	drawMap(0, 0, center, zoom);
-	endMoveMap();
-	
-	canvas.removeEventListener('mousemove', overMap, false);
-	window.clearTimeout(timer);
-	timer = window.setTimeout(function() {
-		canvas.addEventListener('mousemove', overMap, false);
-	}, 1000);
-	
-	e.preventDefault();
-}
-
-function overMap(e) {
-	var x = e.clientX - cx;
-	var y = (e.clientY - cy);
-	
-	current = coords.get(x, y);
-	
-	con.putImageData(imageData, 0, 0);
-	if (current) {
-		box.innerHTML = 'Pv: ' + current.pv.array + '</br> v: ' + current.planet;
-		box.style.left = e.clientX + 'px';
-		box.style.top = e.clientY + 'px';
-		
-		con.save();
-
-		con.translate(400, 400);
-		con.scale(1, -1);
-		
-		con.beginPath();
-		con.strokeStyle = 'red';
-		con.arc(current.pv.x, current.pv.z, 10, 0, Math.PI * 2);
-		con.closePath();
-		con.stroke();
-		
-		con.restore();
-	}
-}
-
-var lastX, lastY;
-function beginMoveMap(e) {
-	lastX = e.clientX;
-	lastY = e.clientY;
-	
-	document.addEventListener('mousemove', moveMap, false);
-	document.addEventListener('mouseup', endMoveMap, false);
-	canvas.removeEventListener('mousemove', overMap, false);
-}
-
-function moveMap(e) {
-	var offsetX = (e.clientX - lastX);
-	var offsetY = e.clientY - lastY;
-	
-	lastX = e.clientX;
-	lastY = e.clientY;
-
-	drawMap(offsetX * Math.PI / 180, offsetY * Math.PI / 180, center, zoom);
-}
-
-function endMoveMap() {
-	coords = new RasterMap();
-	for (var i = 0, el; el = coordsArray[i]; ++i)
-		coords.put(el.pv.x + 400, -el.pv.z + 400, el.pv.y, el);
-	
-	imageData = con.getImageData(0, 0, 800, 800);
-
-	document.removeEventListener('mousemove', moveMap, false);
-	document.removeEventListener('mouseup', endMoveMap, false);
-	canvas.addEventListener('mousemove', overMap, false);
-}
-
-var counter = 0;
-function run() {
-	drawMap(Math.PI / 180, Math.PI / 90, center, zoom);
-	
-	counter++;
-	
-//	if (counter < 100)
-		window.setTimeout(run, 0);
-}
-
 function createMap() {
-	var hyp = range2 * range2;
+	var radius = 3000;
+	var hyp = radius * radius;
 	
+	var stars = [];
 	for (var i = 0; i < 1000; ) {
 		var star = new Vector(
-			Math.floor(Math.random() * range) - range2,
-			Math.floor(Math.random() * range) - range2, 
-			Math.floor(Math.random() * range) - range2
+			Math.floor(Math.random() * radius * 2) - radius,
+			Math.floor(Math.random() * radius * 2) - radius, 
+			Math.floor(Math.random() * radius * 2) - radius
 		);
 		
 		if (star.dot(star) < hyp) {
@@ -205,81 +30,270 @@ function createMap() {
 			stars.push(star);
 		}		
 	}
+	return stars;
 }
 
-function drawMap(alpha, beta, cent, zoom) {
-	if (alpha != 0) {
-		matrix = matrix.rotateZ(alpha);
-	}
+window.onload = function() {
+	canvas = document.getElementById('planets');
 	
-	if (beta != 0) {
-		matrix = matrix.rotateX(beta);
-	}
+	map = new Map(canvas, createMap());
 	
-	zoom *= range;
+	console.log('start');
+	
+	map.draw();
+};
 
-	var scale = 800 / zoom;
-
-	con.save();
-	con.clearRect(0, 0, 800, 800);
-	
-	con.translate(400, 400);
-	con.scale(1, -1);
-	
-	con.fillStyle = 'rgb(255,255,255)';
-	
-	coordsArray = [];
-	
-	var m = matrix.scale(scale);
-	
-	for (var i = 0, star; star = stars[i]; ++i) {
-		var relStar = star.sub(cent);
+var Map = Object.inherit({
+	initialize: function(element, stars) {		
+		this.element = element;
+		this.context = canvas.getContext('2d');
+		this.stars = stars;
+		this.matrix = Matrix.IDENTITY;
+		this.center = Vector.ZERO;
+		this.zoom = 1;
+		this.data = null;
+		this.radius = 3000;
+		this.current = null;
+		this.raster = null;
 		
-		if (relStar.abs() < zoom/2) {
-			var pv = relStar.transform(m);
-			
-			coordsArray.push({
-				pv : pv,
-				planet: star
-			});
-			
-			var dot = (.25 + (-pv.y + 400) / 800 * 2) / zoom * range;
-			 
-			con.beginPath();
-			con.arc(pv.x, pv.z, dot, 0, Math.PI * 2, false);
-			con.closePath();
-			con.fill();
+		this.cx = element.offsetLeft;
+		this.cy = element.offsetTop;
+		
+		this.beginMoveListener = this.onBeginMove.bind(this);
+		this.moveListener = this.onMove.bind(this);
+		this.endMoveListener = this.onEndMove.bind(this);
+		this.overListener = this.onOver.bind(this);
+		this.wheelListener = this.onWheel.bind(this);
+		this.wheelTimerListener = this.onWheelTimer.bind(this);
+		
+		element.addEventListener('mousedown', this.beginMoveListener, false);
+		element.addEventListener('mousemove', this.overListener, false);
+		element.addEventListener('mousewheel', this.wheelListener, false);
+		element.addEventListener('DOMMouseScroll', this.wheelListener, false);
+	},
+	
+	reset: function() {
+		this.context.clear();
+		this.data = null;
+		this.matrix = null;
+	},
+
+	save: function() {
+		this.context.save();
+		this.context.clear();
+		this.data = this.context.getImageData(0, 0, this.element.width, this.element.height);
+		this.context.restore();
+	},
+
+	restore: function() {
+		if (this.data) {
+			this.context.save();
+			this.context.clear();
+			this.context.putImageData(this.data, 0, 0);
+			this.context.restore();
 		}
+	},
+	
+	onWheel: function(e) {
+		var direction = e.wheelDelta? e.wheelDelta: -e.detail;
+		console.log('wheel');
+		var delta = direction > 0? 2: -2;
+		var oldZoom = this.zoom;
+		
+		if (delta > 5)
+			delta = 5;
+		
+		this.zoom -= delta / 50;
+		if (this.zoom < 0.05)
+			this.zoom = 0.05;
+		
+		if (this.zoom > 1.5)
+			this.zoom = 1.5;
+		
+		if (this.current && this.center !== this.current.planet) {
+			if (oldZoom > this.zoom) {
+				var cp = this.current.planet.sub(this.center);
+				var step = cp.normalize(this.radius * (oldZoom - this.zoom));
+				
+				if (step.abs() > cp.abs()) {
+					this.center = this.current.planet;
+				} else {			
+					this.center = this.center.add(step);
+				}
+			} 
+		}
+		
+		if (this.zoom >= 1) {
+			this.center = Vector.ZERO;
+		} else if (this.center.abs() + this.radius * this.zoom > this.radius) {
+			this.center = this.center.normalize((1 - this.zoom) * this.radius);
+		}
+		
+		this.draw();
+		
+		this.element.removeEventListener('mousemove', this.overListener, false);
+		window.clearTimeout(this.timer);
+		this.timer = window.setTimeout(this.wheelTimerListener, 1000);
+		
+		e.preventDefault();
+	},
+	
+	onWheelTimer: function() {
+		this.element.addEventListener('mousemove', this.overListener, false);
+	},
+	
+	onOver: function(e) {
+		var x = e.clientX - this.cx;
+		var y = (e.clientY - this.cy);
+		
+		this.restore();
+		
+		this.current = this.raster.get(x, y);
+		if (this.current) {
+			var box = document.getElementById('box');
+			box.innerHTML = 'Pv: ' + this.current.pv + '</br> v: ' + this.current.planet;
+			box.style.left = e.clientX + 'px';
+			box.style.top = e.clientY + 'px';
+			
+			this.context.save();
+			
+			this.context.translate(400, 400);
+			this.context.scale(1, -1);
+			
+			this.context.beginPath();
+			this.context.strokeStyle = 'red';
+			this.context.arc(this.current.pv.x, this.current.pv.z, 10, 0, Math.PI * 2);
+			this.context.closePath();
+			this.context.stroke();
+			
+			this.context.restore();
+		}
+	},
+	
+	lastX: 0,
+	lastY: 0,
+	
+	onBeginMove: function(e) {
+		this.lastX = e.clientX;
+		this.lastY = e.clientY;
+		
+		document.addEventListener('mousemove', this.moveListener, false);
+		document.addEventListener('mouseup', this.endMoveListener, false);
+		canvas.removeEventListener('mousemove', this.overListener, false);
+	},
+	
+	onMove: function(e) {
+		var offsetX = (e.clientX - this.lastX);
+		var offsetY = e.clientY - this.lastY;
+		
+		this.lastX = e.clientX;
+		this.lastY = e.clientY;
+		
+		this.rotateAlpha(offsetX * Math.PI / 180);
+		this.rotateBeta(offsetY * Math.PI / 180);
+		this.draw();
+	},
+	
+	onEndMove: function() {
+		document.removeEventListener('mousemove', this.moveListener, false);
+		document.removeEventListener('mouseup', this.endMoveListener, false);
+		this.element.addEventListener('mousemove', this.overListener, false);
+	},
+	
+	rotateAlpha: function(alpha) {
+		if (alpha != 0) {
+			this.matrix = this.matrix.rotateZ(alpha);
+		}
+	},
+	
+	rotateBeta: function(beta) {
+		if (beta != 0) {
+			this.matrix = this.matrix.rotateX(beta);
+		}
+	},
+	
+	draw: function() {
+		this.raster = new RasterMap();
+
+		this.context.save();
+		this.context.clearRect(0, 0, 800, 800);
+		
+		this.context.translate(400, 400);
+		this.context.scale(1, -1);
+		
+		this.context.fillStyle = 'rgb(255,255,255)';
+		
+		var zoom = this.zoom * this.radius;
+		var m = this.matrix.scale(400 / zoom);
+		for (var i = 0, star; star = this.stars[i]; ++i) {
+			var relStar = star.sub(this.center);
+			
+			if (relStar.abs() < zoom) {
+				var pv = relStar.transform(m);
+				this.raster.put(pv.x + 400, -pv.z + 400, pv.y, {
+					pv : pv,
+					planet: star
+				});
+				
+				var dot = (.25 + (-pv.y + 400) / 800 * 2) / this.zoom;
+				
+				this.context.beginPath();
+				this.context.arc(pv.x, pv.z, dot, 0, Math.PI * 2, false);
+				this.context.closePath();
+				this.context.fill();
+			}
+		}
+		
+//		this.context.scale(800 / this.radius * 2, 800 / this.radius * 2);
+		
+		var x = new Vector(800, 0, 0).transform(this.matrix);
+		
+		this.context.strokeStyle = 'rgb(255,0,0)';
+		this.context.beginPath();
+		this.context.moveTo(0, 0);
+		this.context.lineTo(x.x * 400 / this.radius, x.z * 400 / this.radius);
+		this.context.stroke();
+		
+		var y = new Vector(0, 800, 0).transform(this.matrix);
+
+		this.context.strokeStyle = 'rgb(0,255,0)';
+		this.context.beginPath();
+		this.context.moveTo(0, 0);
+		this.context.lineTo(y.x * 400 / this.radius, y.z * 400 / this.radius);
+		this.context.stroke();
+		
+		var z = new Vector(0, 0, 800).transform(this.matrix);
+
+		this.context.strokeStyle = 'rgb(0,0,255)';
+		this.context.beginPath();
+		this.context.moveTo(0, 0);
+		this.context.lineTo(z.x * 400 / this.radius, z.z * 400 / this.radius);
+		this.context.stroke();
+		
+		this.context.restore();
+		
+		this.save();
 	}
-	
-//	con.scale(800 / range, 800 / range);
-	
-	var x = new Vector(800, 0, 0).transform(matrix);
-	
-	con.strokeStyle = 'rgb(255,0,0)';
-	con.beginPath();
-	con.moveTo(0, 0);
-	con.lineTo(x.x * 800 / range, x.z * 800 / range);
-	con.stroke();
-	
-	var y = new Vector(0, 800, 0).transform(matrix);
+});
 
-	con.strokeStyle = 'rgb(0,255,0)';
-	con.beginPath();
-	con.moveTo(0, 0);
-	con.lineTo(y.x * 800 / range, y.z * 800 / range);
-	con.stroke();
-	
-	var z = new Vector(0, 0, 800).transform(matrix);
 
-	con.strokeStyle = 'rgb(0,0,255)';
-	con.beginPath();
-	con.moveTo(0, 0);
-	con.lineTo(z.x * 800 / range, z.z * 800 / range);
-	con.stroke();
+
+
+
+
+var counter = 0;
+function run() {
+	drawMap(Math.PI / 180, Math.PI / 90, this.center, this.zoom);
 	
-	con.restore();
+	counter++;
+	
+//	if (counter < 100)
+		window.setTimeout(run, 0);
 }
+
+
+
+
 
 function RasterMap() {
 	this.array = {};

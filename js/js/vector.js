@@ -7,11 +7,11 @@ var Matrix = Object.inherit({
 	 * @param columns
 	 */
 	initialize: function(array) {
-		array = array[0] instanceof Array? array: Array.prototype.slice.call(arguments, 0);
+		var arr = array[0] instanceof Array? array: Array.prototype.slice.call(arguments, 0);
 		
-		this.array = array;
-		this.rows = array.length;
-		this.columns = array[0].length;
+		this.array = arr;
+		this.rows = arr.length;
+		this.columns = arr[0].length;
 	},
 	
 	add: function(matrix) {
@@ -22,7 +22,7 @@ var Matrix = Object.inherit({
 		for (var i = 0; i < this.rows; ++i) {
 			newArray[i] = [];
 			for (var j = 0; j < this.columns; ++j) {
-				newArray.array[i][j] = this.array[i][j] + matrix.array[i][j];
+				newArray[i][j] = this.array[i][j] + matrix.array[i][j];
 			}
 		}
 		
@@ -37,7 +37,7 @@ var Matrix = Object.inherit({
 		for (var i = 0; i < this.rows; ++i) {
 			newArray[i] = [];
 			for (var j = 0; j < this.columns; ++j) {
-				newArray.array[i][j] = this.array[i][j] - matrix.array[i][j];
+				newArray[i][j] = this.array[i][j] - matrix.array[i][j];
 			}
 		}
 		
@@ -49,7 +49,7 @@ var Matrix = Object.inherit({
 		for (var i = 0; i < this.rows; ++i) {
 			newArray[i] = [];
 			for (var j = 0; j < this.columns; ++j) {
-				newArray.array[i][j] = this.array[i][j] * dot;
+				newArray[i][j] = this.array[i][j] * dot;
 			}
 		}
 		
@@ -157,14 +157,17 @@ var Vector = Matrix.inherit({
 	 * @param array
 	 */
 	initialize: function(array) {
-		array = array instanceof Array? array: arguments;
-		
-		var a = [];
-		for (var i = 0; i < array.length; ++i) {
-			a[i] = [array[i]];
+		var arr;
+		if (array instanceof Array) {
+			arr = array;
+		} else {
+			arr = [];
+			for (var i = 0; i < arguments.length; ++i) {
+				arr[i] = [arguments[i]];
+			}
 		}
 		
-		this.superCall(a);
+		this.superCall(arr);
 	},
 	
 	abs: function() {
@@ -201,7 +204,7 @@ var Vector = Matrix.inherit({
 	 * @returns Number
 	 */
 	dot: function(v) {
-		if (this.rows != v.rwos)
+		if (this.rows != v.rows)
 			return undefined;
 		
 		var dot = 0;
