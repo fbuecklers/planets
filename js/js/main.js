@@ -18,18 +18,32 @@ function createMap() {
 	
 	var stars = [];
 	for (var i = 0; i < 1000; ) {
-		var star = new Vector(
+		var position = new Vector(
 			Math.floor(Math.random() * radius * 2) - radius,
 			Math.floor(Math.random() * radius * 2) - radius, 
 			Math.floor(Math.random() * radius * 2) - radius
 		);
 		
-		if (star.dot(star) < hyp) {
+		if (position.dot(position) < hyp) {
 			++i;
+			
+			var name = 'P4X' + pad(position.x) + pad(position.y) + pad(position.z);
+			var star = new Star(position, name);
 			
 			stars.push(star);
 		}		
 	}
+	
+	function pad(num) {
+		var s = Math.floor(num / 100);
+		s += '';
+		
+		while (s.length < 2)
+			s = '0' + s;
+		
+		return s;
+	};
+	
 	return stars;
 }
 
@@ -96,7 +110,6 @@ var Map = Object.inherit({
 	
 	onWheel: function(e) {
 		var direction = e.wheelDelta? e.wheelDelta: -e.detail;
-		console.log('wheel');
 		var delta = direction > 0? 2: -2;
 		var oldZoom = this.zoom;
 		
@@ -110,13 +123,13 @@ var Map = Object.inherit({
 		if (this.zoom > 1.5)
 			this.zoom = 1.5;
 		
-		if (this.current && this.center !== this.current.planet) {
+		if (this.current && this.center !== this.current.star.position) {
 			if (oldZoom > this.zoom) {
-				var cp = this.current.planet.sub(this.center);
+				var cp = this.current.star.position.sub(this.center);
 				var step = cp.normalize(this.radius * (oldZoom - this.zoom));
 				
 				if (step.abs() > cp.abs()) {
-					this.center = this.current.planet;
+					this.center = this.current.star.position;
 				} else {			
 					this.center = this.center.add(step);
 				}
@@ -151,7 +164,7 @@ var Map = Object.inherit({
 		this.current = this.raster.get(x, y);
 		if (this.current) {
 			var box = document.getElementById('box');
-			box.innerHTML = 'Pv: ' + this.current.pv + '</br> v: ' + this.current.planet;
+			box.innerHTML = 'Position: ' + this.current.pv + '</br> v: ' + this.current.star.position;
 			box.style.left = e.clientX + 'px';
 			box.style.top = e.clientY + 'px';
 			
@@ -221,26 +234,23 @@ var Map = Object.inherit({
 		this.context.translate(400, 400);
 		this.context.scale(1, -1);
 		
-		this.context.fillStyle = 'rgb(255,255,255)';
+		this.context.fillStyle = 'white';
+		this.context.strokeStyle = 'white';
+		this.context.font = '12px Verdana';
 		
 		var zoom = this.zoom * this.radius;
 		var m = this.matrix.scale(400 / zoom);
 		for (var i = 0, star; star = this.stars[i]; ++i) {
-			var relStar = star.sub(this.center);
+			var relStar = star.position.sub(this.center);
 			
 			if (relStar.abs() < zoom) {
 				var pv = relStar.transform(m);
 				this.raster.put(pv.x + 400, -pv.z + 400, pv.y, {
 					pv : pv,
-					planet: star
+					star: star
 				});
 				
-				var dot = (.25 + (-pv.y + 400) / 800 * 2) / this.zoom;
-				
-				this.context.beginPath();
-				this.context.arc(pv.x, pv.z, dot, 0, Math.PI * 2, false);
-				this.context.closePath();
-				this.context.fill();
+				this.drawStar(star, pv);
 			}
 		}
 		
@@ -273,6 +283,19 @@ var Map = Object.inherit({
 		this.context.restore();
 		
 		this.save();
+	},
+	
+	drawStar: function(star, pv) {
+		var dot = (.25 + (-pv.y + 400) / 800 * 2) / this.zoom;
+		
+//		if (pv.y < 0) {
+//			this.context.strokeText(star.name, Math.floor(pv.x) + dot + 5, Math.floor(pv.z) - 5);
+//		}
+		
+		this.context.beginPath();
+		this.context.arc(pv.x, pv.z, dot, 0, Math.PI * 2, false);
+		this.context.closePath();
+		this.context.fill();
 	}
 });
 

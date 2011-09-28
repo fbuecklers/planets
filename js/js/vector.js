@@ -188,7 +188,7 @@ var Vector = Matrix.inherit({
 	 * @returns {Vector}
 	 */
 	cross: function(v) {
-		if (this.length != v.length || this.length != 3)
+		if (this.rows != v.rows || this.rows != 3)
 			return undefined;
 		
 		return new Vector(
