@@ -12,6 +12,12 @@ CanvasRenderingContext2D.prototype.clear = function() {
 	this.restore();
 }
 
+CanvasRenderingContext2D.prototype.dot = function(x, y, radius) {
+	this.beginPath();
+	this.arc(x, y, radius, 0, Math.PI * 2, false);
+	this.fill();
+}
+
 function createMap() {
 	var radius = 3000;
 	var hyp = radius * radius;
@@ -254,6 +260,8 @@ var Map = Object.inherit({
 			}
 		}
 		
+		this.drawWay(m);
+		
 //		this.context.scale(800 / this.radius * 2, 800 / this.radius * 2);
 		
 		var x = new Vector(800, 0, 0).transform(this.matrix);
@@ -287,15 +295,69 @@ var Map = Object.inherit({
 	
 	drawStar: function(star, pv) {
 		var dot = (.25 + (-pv.y + 400) / 800 * 2) / this.zoom;
-		
 //		if (pv.y < 0) {
 //			this.context.strokeText(star.name, Math.floor(pv.x) + dot + 5, Math.floor(pv.z) - 5);
 //		}
 		
+		this.context.dot(pv.x, pv.z, dot);
+		
+	},
+	
+	drawWay: function(m) {
+		var points = [
+		    new Vector(1500, 0, 0),
+		    new Vector(0, 0, 0),
+		    new Vector(0, 1500, 0),
+		    new Vector(0, 200, 400),
+		    new Vector(-500, -300, 1000),
+		    new Vector(400, 400, 800)
+		];
+		
+		var len = points.length;
+		var tpoints = [];
+		for (var i = 0; i < len; ++i)
+			tpoints[i] = points[i].transform(m);
+		
+		var tangents = [tpoints[1].sub(tpoints[0])];
+		for (var i = 1; i < len - 1; ++i) {
+			tangents[i] = tpoints[i + 1].sub(tpoints[i - 1]);
+		}
+		if (len > 2) 
+			tangents[i] = tpoints[len - 1].sub(tpoints[len - 2]);
+		
+		this.context.strokeStyle = 'white';
 		this.context.beginPath();
-		this.context.arc(pv.x, pv.z, dot, 0, Math.PI * 2, false);
-		this.context.closePath();
-		this.context.fill();
+		this.context.moveTo(tpoints[0].x, tpoints[0].z);
+		for (var i = 0; i < tpoints.length - 1; ++i) {
+			var abs = tpoints[i + 1].sub(tpoints[i]).abs();
+			var cp1 = tpoints[i].add(tangents[i].normalize(abs / 3));
+			var cp2 = tpoints[i + 1].sub(tangents[i + 1].normalize(abs / 3));
+			var p = tpoints[i + 1];
+			this.context.bezierCurveTo(cp1.x, cp1.z, cp2.x, cp2.z, p.x, p.z);
+		}
+		this.context.stroke();
+		
+		this.context.fillStyle = 'yellow';
+		for (var i = 0, pv; pv = tpoints[i]; ++i) {
+			this.context.dot(pv.x, pv.z, 2);
+		}
+		
+		this.context.fillStyle = 'red';
+		for (var i = 0; i < tpoints.length - 1; ++i) {
+			var abs = tpoints[i + 1].sub(tpoints[i]).abs();
+			var p0 = tpoints[i];
+			var p1 = p0.add(tangents[i].normalize(abs / 3));
+			var p3 = tpoints[i + 1];
+			var p2 = p3.sub(tangents[i + 1].normalize(abs / 3));
+			
+			var t = .5;
+			var pos = p0.scalar(Math.pow(1 - t, 3))
+				.add(p1.scalar(3 * t * Math.pow(1 - t, 2)))
+				.add(p2.scalar(3 * Math.pow(t, 2) * (1 - t)))
+				.add(p3.scalar(Math.pow(t, 3)));
+			
+			this.context.dot(pos.x, pos.z, 2);
+		}
 	}
 });
 
