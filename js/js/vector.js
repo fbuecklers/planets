@@ -16,13 +16,13 @@ var Matrix = Object.inherit({
 	
 	add: function(matrix) {
 		if (this.rows != matrix.rows || this.columns != matrix.columns)
-			return undefined;
+			throw new Error('matrix can\'t be added to this, since the rows or columns aren\'t equal');
 		
 		var newArray = [];
 		for (var i = 0; i < this.rows; ++i) {
-			newArray[i] = [];
+			var arr = newArray[i] = [];
 			for (var j = 0; j < this.columns; ++j) {
-				newArray[i][j] = this.array[i][j] + matrix.array[i][j];
+				arr[j] = this.array[i][j] + matrix.array[i][j];
 			}
 		}
 		
@@ -31,13 +31,13 @@ var Matrix = Object.inherit({
 	
 	sub: function(matrix) {
 		if (this.rows != matrix.rows || this.columns != matrix.columns)
-			return undefined;
+			throw new Error('matrix can\'t be substracted from this, since the rows or columns aren\'t equal');
 		
 		var newArray = [];
 		for (var i = 0; i < this.rows; ++i) {
-			newArray[i] = [];
+			var arr = newArray[i] = [];
 			for (var j = 0; j < this.columns; ++j) {
-				newArray[i][j] = this.array[i][j] - matrix.array[i][j];
+				arr[j] = this.array[i][j] - matrix.array[i][j];
 			}
 		}
 		
@@ -47,56 +47,64 @@ var Matrix = Object.inherit({
 	scalar: function(dot) {
 		var newArray = [];
 		for (var i = 0; i < this.rows; ++i) {
-			newArray[i] = [];
+			var arr = newArray[i] = [];
 			for (var j = 0; j < this.columns; ++j) {
-				newArray[i][j] = this.array[i][j] * dot;
+				arr[j] = this.array[i][j] * dot;
 			}
 		}
 		
 		return new this.constructor(newArray);
 	},
 	
-	transform: function(matrix) {
-		if (matrix.columns != this.rows)
-			return undefined;
+	dot: function(matrix) {
+		if (this.columns != matrix.rows)
+			throw new Error('This columns size is not equals to matrix rows size');
 		
 		var newArray = [];
 
-		for (var i = 0; i < matrix.rows; ++i) {
-			newArray[i] = [];
-			for (var j = 0; j < this.columns; ++j){
-				newArray[i][j] = 0;
-				for (var k = 0; k < this.rows; ++k) {
-					newArray[i][j] += matrix.array[i][k] * this.array[k][j];
+		for (var i = 0; i < this.rows; ++i) {
+			var arr = newArray[i] = [];
+			for (var j = 0; j < matrix.columns; ++j){
+				arr[j] = 0;
+				for (var k = 0; k < this.columns; ++k) {
+					arr[j] += this.array[i][k] * matrix.array[k][j];
 				}
 			}
 		}
 		
-		return new this.constructor(newArray);
+		return new matrix.constructor(newArray);
 	},
 	
 	scale: function(scale) {
-		return this.transform(new Matrix(
+		return new Matrix(
 	  	    [scale, 0, 0],
 	  	    [0, scale, 0],
 	  	    [0, 0, scale]
-	  	));
+	  	).dot(this);
 	},
 
 	rotateX: function(alpha) {
-		return this.transform(new Matrix(
+		return new Matrix(
 		    [1, 0, 0],
 		    [0, Math.cos(alpha), -Math.sin(alpha)],
 		    [0, Math.sin(alpha), Math.cos(alpha)]
-		));
+		).dot(this);
+	},
+	
+	rotateY: function(alpha) {
+		return new Matrix(
+			[Math.cos(alpha), 0, Math.sin(alpha)],
+			[0, 1, 0],
+			[-Math.sin(alpha), 0, Math.cos(alpha)]
+		).dot(this);
 	},
 
 	rotateZ: function(alpha) {
-		return this.transform(new Matrix(
+		return new Matrix(
 		    [Math.cos(alpha), -Math.sin(alpha), 0],
 		    [Math.sin(alpha), Math.cos(alpha), 0],
 		    [0, 0, 1]
-		));
+		).dot(this);
 	},
 
 	rotateN: function(n, alpha) {
@@ -104,15 +112,15 @@ var Matrix = Object.inherit({
 		var sin = Math.sin(alpha);
 		var n1 = n.array[0], n2 = n.array[1], n3 = n.array[2];
 		
-		return this.transform(new Matrix(
+		return new Matrix(
 		    [cos + n1*n1*(1-cos), n1*n2*(1-cos) - n3*sin, n1*n3*(1-cos) + n2*sin],
 		    [n2*n1*(1-cos) + n3*sin, cos + n2*n2*(1-cos), n2*n3*(1-cos) - n1*sin],
 		    [n3*n1*(1-cos) - n2*sin, n3*n2*(1-cos) + n1*sin, cos + n3*n3*(1-cos)]
-		));
+		).dot(this);
 	},
 	
 	toString: function() {
-		return JSON.stringify(this.array);
+		return 'Matrix: ' + JSON.stringify(this.array);
 	}
 });
 
@@ -126,27 +134,18 @@ var Vector = Matrix.inherit({
 	x: {
 		get : function() {
 			return this.array[0][0];
-		},
-		set : function(x) {
-			this.array[0][0] = x;
 		}
 	},
 	
 	y: {
 		get : function(y) {
 			return this.array[1][0];
-		},
-		set : function(y) {
-			this.array[1][0] = y;
 		}
 	},
 	
 	z: {
 		get : function() {
 			return this.array[2][0];
-		},
-		set : function(z) {
-			this.array[2][0] = z;
 		}
 	},
 	
@@ -157,17 +156,21 @@ var Vector = Matrix.inherit({
 	 * @param array
 	 */
 	initialize: function(array) {
-		var arr;
-		if (array instanceof Array) {
-			arr = array;
-		} else {
-			arr = [];
-			for (var i = 0; i < arguments.length; ++i) {
-				arr[i] = [arguments[i]];
+		var arr = array instanceof Array? array: arguments;
+		
+		if (arr.length == 1 && arr[0] instanceof Array)
+			arr = arr[0];
+		
+		if (arr.length > 1 && !(arr[0] instanceof Array)) {
+			m = [];
+			for (var i = 0; i < arr.length; ++i) {
+				m[i] = [arr[i]];
 			}
+		} else {
+			m = arr;
 		}
 		
-		this.superCall(arr);
+		this.superCall(m);
 	},
 	
 	abs: function() {
@@ -200,19 +203,20 @@ var Vector = Matrix.inherit({
 
 	/**
 	 * 
-	 * @param {Vector} v
-	 * @returns Number
+	 * @param {Vector | Matrix} v
+	 * @returns Number | Vector
 	 */
 	dot: function(v) {
-		if (this.rows != v.rows)
-			return undefined;
-		
-		var dot = 0;
-		for (var i = 0; i < this.rows; ++i) {
-			dot += this.array[i][0] * v.array[i][0];
-		} 
-		
-		return dot;
+		if (v instanceof Vector) {
+			var dot = 0;
+			for (var i = 0; i < this.rows; ++i) {
+				dot += this.array[i][0] * v.array[i][0];
+			} 
+			
+			return dot;
+		} else {
+			return superCall(v);
+		}
 	},
 
 	/**
@@ -221,7 +225,19 @@ var Vector = Matrix.inherit({
 	 * @returns Number
 	 */
 	angle: function(v) {
-		return Math.acos(this.dot(v));
+		return Math.acos(this.dot(v) / (this.abs() * v.abs()));
+	},
+	
+	toString: function() {
+		var str = '';
+		for (var i = 0; i < this.rows; ++i) {
+			if (i > 0)
+				str += ', ';
+			
+			str += this.array[i][0];
+		}
+		
+		return 'Vector: [' + str + ']'; 
 	}
 });
 

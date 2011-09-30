@@ -1,5 +1,4 @@
 
-var map;
 
 CanvasRenderingContext2D.prototype.resetTransform = function() {
 	this.setTransform(1, 0, 0, 1, 0, 0);
@@ -8,7 +7,7 @@ CanvasRenderingContext2D.prototype.resetTransform = function() {
 CanvasRenderingContext2D.prototype.clear = function() {
 	this.save();
 	this.resetTransform();
-	this.clearRect(0, 0, this.width, this.height);
+	this.clearRect(0, 0, 800, 800);
 	this.restore();
 }
 
@@ -53,43 +52,44 @@ function createMap() {
 	return stars;
 }
 
+var map;
 window.onload = function() {
-	canvas = document.getElementById('planets');
+	var canvas = document.getElementById('planets');
 	
 	map = new Map(canvas, createMap());
 	
 	console.log('start');
 	
 	map.draw();
+	map.updateRaster();
 };
 
 var Map = Object.inherit({
 	initialize: function(element, stars) {		
 		this.element = element;
-		this.context = canvas.getContext('2d');
+		this.context = element.getContext('2d');
 		this.stars = stars;
-		this.matrix = Matrix.IDENTITY;
+		this.radius = 3000;
 		this.center = Vector.ZERO;
 		this.zoom = 1;
 		this.data = null;
-		this.radius = 3000;
 		this.current = null;
 		this.raster = null;
 		
 		this.cx = element.offsetLeft;
 		this.cy = element.offsetTop;
 		
-		this.beginMoveListener = this.onBeginMove.bind(this);
-		this.moveListener = this.onMove.bind(this);
-		this.endMoveListener = this.onEndMove.bind(this);
-		this.overListener = this.onOver.bind(this);
-		this.wheelListener = this.onWheel.bind(this);
-		this.wheelTimerListener = this.onWheelTimer.bind(this);
+		this.context.translate(400, 400);
+		this.matrix = new Matrix(
+			[400 / this.radius, 0, 0], 
+			[0, -400 / this.radius, 0], 
+			[0, 0, 400 / this.radius]
+		);
 		
-		element.addEventListener('mousedown', this.beginMoveListener, false);
-		element.addEventListener('mousemove', this.overListener, false);
-		element.addEventListener('mousewheel', this.wheelListener, false);
-		element.addEventListener('DOMMouseScroll', this.wheelListener, false);
+		element.addEventListener('mousedown', this.onBeginMove, false);
+		element.addEventListener('mousemove', this.onOver, false);
+		element.addEventListener('mousewheel', this.onWheel, false);
+		element.addEventListener('DOMMouseScroll', this.onWheel, false);
 	},
 	
 	reset: function() {
@@ -100,7 +100,6 @@ var Map = Object.inherit({
 
 	save: function() {
 		this.context.save();
-		this.context.clear();
 		this.data = this.context.getImageData(0, 0, this.element.width, this.element.height);
 		this.context.restore();
 	},
@@ -118,16 +117,18 @@ var Map = Object.inherit({
 		var direction = e.wheelDelta? e.wheelDelta: -e.detail;
 		var delta = direction > 0? 2: -2;
 		var oldZoom = this.zoom;
-		
-		if (delta > 5)
-			delta = 5;
-		
+//		
+//		if (delta > 5)
+//			delta = 5;
+//		
 		this.zoom -= delta / 50;
 		if (this.zoom < 0.05)
 			this.zoom = 0.05;
 		
 		if (this.zoom > 1.5)
 			this.zoom = 1.5;
+		
+		this.matrix = this.matrix.scale(oldZoom / this.zoom);
 		
 		if (this.current && this.center !== this.current.star.position) {
 			if (oldZoom > this.zoom) {
@@ -150,15 +151,16 @@ var Map = Object.inherit({
 		
 		this.draw();
 		
-		this.element.removeEventListener('mousemove', this.overListener, false);
+		this.element.removeEventListener('mousemove', this.onOver, false);
 		window.clearTimeout(this.timer);
-		this.timer = window.setTimeout(this.wheelTimerListener, 1000);
+		this.timer = window.setTimeout(this.onWheelTimer, 1000);
 		
 		e.preventDefault();
 	},
 	
 	onWheelTimer: function() {
-		this.element.addEventListener('mousemove', this.overListener, false);
+		this.updateRaster();
+		this.element.addEventListener('mousemove', this.onOver, false);
 	},
 	
 	onOver: function(e) {
@@ -176,134 +178,159 @@ var Map = Object.inherit({
 			
 			this.context.save();
 			
-			this.context.translate(400, 400);
-			this.context.scale(1, -1);
-			
 			this.context.beginPath();
 			this.context.strokeStyle = 'red';
-			this.context.arc(this.current.pv.x, this.current.pv.z, 10, 0, Math.PI * 2);
-			this.context.closePath();
+			this.context.arc(this.current.pv.x, this.current.pv.y, 10, 0, Math.PI * 2);
 			this.context.stroke();
 			
 			this.context.restore();
 		}
 	},
 	
-	lastX: 0,
-	lastY: 0,
+	last: null,
+	rotate: false,
 	
 	onBeginMove: function(e) {
-		this.lastX = e.clientX;
-		this.lastY = e.clientY;
+		this.last = new Vector(e.clientX - 400, -e.clientY + 400);
+		this.rotate = this.last.abs() > 300;
 		
-		document.addEventListener('mousemove', this.moveListener, false);
-		document.addEventListener('mouseup', this.endMoveListener, false);
-		canvas.removeEventListener('mousemove', this.overListener, false);
+		document.addEventListener('mousemove', this.onMove, false);
+		document.addEventListener('mouseup', this.onEndMove, false);
+		this.element.removeEventListener('mousemove', this.onOver, false);
 	},
 	
 	onMove: function(e) {
-		var offsetX = (e.clientX - this.lastX);
-		var offsetY = e.clientY - this.lastY;
+		var current = new Vector(e.clientX - 400, -e.clientY + 400);
 		
-		this.lastX = e.clientX;
-		this.lastY = e.clientY;
+		if (this.rotate) {
+			var x = new Vector(1, 0);
+			var currentAngle = current.angle(x);
+			if (current.y < 0)
+				currentAngle = Math.PI * 2 - currentAngle;
+			
+			var lastAngle = this.last.angle(x);
+			if (this.last.y < 0)
+				lastAngle = Math.PI * 2 - lastAngle;
+			
+			this.rotateZ(lastAngle - currentAngle);
+		} else {			
+			var diff = current.sub(this.last);
+			
+			this.rotateY(diff.x * Math.PI / 180);
+			this.rotateX(diff.y * Math.PI / 180);
+		}
 		
-		this.rotateAlpha(offsetX * Math.PI / 180);
-		this.rotateBeta(offsetY * Math.PI / 180);
+		this.last = current;
 		this.draw();
 	},
 	
 	onEndMove: function() {
-		document.removeEventListener('mousemove', this.moveListener, false);
-		document.removeEventListener('mouseup', this.endMoveListener, false);
-		this.element.addEventListener('mousemove', this.overListener, false);
+		document.removeEventListener('mousemove', this.onMove, false);
+		document.removeEventListener('mouseup', this.onEndMove, false);
+		this.element.addEventListener('mousemove', this.onOver, false);
+		
+		this.updateRaster();
 	},
 	
-	rotateAlpha: function(alpha) {
-		if (alpha != 0) {
+	rotateX: function(alpha) {
+		if (alpha) {
+			this.matrix = this.matrix.rotateX(alpha);
+		}
+	},
+
+	rotateY: function(alpha) {
+		if (alpha) {
+			this.matrix = this.matrix.rotateY(alpha);
+		}
+	},
+	
+	rotateZ: function(alpha) {
+		if (alpha) {
 			this.matrix = this.matrix.rotateZ(alpha);
 		}
 	},
 	
-	rotateBeta: function(beta) {
-		if (beta != 0) {
-			this.matrix = this.matrix.rotateX(beta);
+	transform: function(v) {
+		return this.matrix.dot(v.sub(this.center));
+	},
+	
+	updateRaster: function() {
+		this.raster = new RasterMap();
+		
+		var zoom = this.zoom * this.radius;
+		for (var i = 0, star; star = this.stars[i]; ++i) {
+			var relStar = star.position.sub(this.center);
+			
+			if (relStar.abs() < zoom) {
+				var pv = this.matrix.dot(relStar);
+				
+				this.raster.put(pv.x + 400, pv.y + 400, pv.z, {
+					pv : pv,
+					star: star
+				});
+			}
 		}
 	},
 	
 	draw: function() {
-		this.raster = new RasterMap();
-
-		this.context.save();
-		this.context.clearRect(0, 0, 800, 800);
-		
-		this.context.translate(400, 400);
-		this.context.scale(1, -1);
+		this.context.clear();
 		
 		this.context.fillStyle = 'white';
 		this.context.strokeStyle = 'white';
 		this.context.font = '12px Verdana';
 		
 		var zoom = this.zoom * this.radius;
-		var m = this.matrix.scale(400 / zoom);
 		for (var i = 0, star; star = this.stars[i]; ++i) {
 			var relStar = star.position.sub(this.center);
 			
 			if (relStar.abs() < zoom) {
-				var pv = relStar.transform(m);
-				this.raster.put(pv.x + 400, -pv.z + 400, pv.y, {
-					pv : pv,
-					star: star
-				});
-				
+				var pv = this.matrix.dot(relStar);
 				this.drawStar(star, pv);
 			}
 		}
 		
-		this.drawWay(m);
+		this.drawWay();
 		
 //		this.context.scale(800 / this.radius * 2, 800 / this.radius * 2);
 		
-		var x = new Vector(800, 0, 0).transform(this.matrix);
+		var x = this.matrix.dot(new Vector(800, 0, 0));
 		
 		this.context.strokeStyle = 'rgb(255,0,0)';
 		this.context.beginPath();
 		this.context.moveTo(0, 0);
-		this.context.lineTo(x.x * 400 / this.radius, x.z * 400 / this.radius);
+		this.context.lineTo(x.x, x.y);
 		this.context.stroke();
 		
-		var y = new Vector(0, 800, 0).transform(this.matrix);
+		var y = this.matrix.dot(new Vector(0, 800, 0));
 
 		this.context.strokeStyle = 'rgb(0,255,0)';
 		this.context.beginPath();
 		this.context.moveTo(0, 0);
-		this.context.lineTo(y.x * 400 / this.radius, y.z * 400 / this.radius);
+		this.context.lineTo(y.x, y.y);
 		this.context.stroke();
 		
-		var z = new Vector(0, 0, 800).transform(this.matrix);
+		var z = this.matrix.dot(new Vector(0, 0, 800));
 
 		this.context.strokeStyle = 'rgb(0,0,255)';
 		this.context.beginPath();
 		this.context.moveTo(0, 0);
-		this.context.lineTo(z.x * 400 / this.radius, z.z * 400 / this.radius);
+		this.context.lineTo(z.x, z.y);
 		this.context.stroke();
-		
-		this.context.restore();
 		
 		this.save();
 	},
 	
 	drawStar: function(star, pv) {
-		var dot = (.25 + (-pv.y + 400) / 800 * 2) / this.zoom;
+		var dot = (.25 + (pv.z + 400) / 800 * 2) / this.zoom;
 //		if (pv.y < 0) {
 //			this.context.strokeText(star.name, Math.floor(pv.x) + dot + 5, Math.floor(pv.z) - 5);
 //		}
 		
-		this.context.dot(pv.x, pv.z, dot);
+		this.context.dot(pv.x, pv.y, dot);
 		
 	},
 	
-	drawWay: function(m) {
+	drawWay: function() {
 		var points = [
 		    new Vector(1500, 0, 0),
 		    new Vector(0, 0, 0),
@@ -316,7 +343,7 @@ var Map = Object.inherit({
 		var len = points.length;
 		var tpoints = [];
 		for (var i = 0; i < len; ++i)
-			tpoints[i] = points[i].transform(m);
+			tpoints[i] = this.transform(points[i]);
 		
 		var tangents = [tpoints[1].sub(tpoints[0])];
 		for (var i = 1; i < len - 1; ++i) {
@@ -327,19 +354,19 @@ var Map = Object.inherit({
 		
 		this.context.strokeStyle = 'white';
 		this.context.beginPath();
-		this.context.moveTo(tpoints[0].x, tpoints[0].z);
+		this.context.moveTo(tpoints[0].x, tpoints[0].y);
 		for (var i = 0; i < tpoints.length - 1; ++i) {
 			var abs = tpoints[i + 1].sub(tpoints[i]).abs();
 			var cp1 = tpoints[i].add(tangents[i].normalize(abs / 3));
 			var cp2 = tpoints[i + 1].sub(tangents[i + 1].normalize(abs / 3));
 			var p = tpoints[i + 1];
-			this.context.bezierCurveTo(cp1.x, cp1.z, cp2.x, cp2.z, p.x, p.z);
+			this.context.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
 		}
 		this.context.stroke();
 		
 		this.context.fillStyle = 'yellow';
 		for (var i = 0, pv; pv = tpoints[i]; ++i) {
-			this.context.dot(pv.x, pv.z, 2);
+			this.context.dot(pv.x, pv.y, 2);
 		}
 		
 		this.context.fillStyle = 'red';
@@ -356,7 +383,7 @@ var Map = Object.inherit({
 				.add(p2.scalar(3 * Math.pow(t, 2) * (1 - t)))
 				.add(p3.scalar(Math.pow(t, 3)));
 			
-			this.context.dot(pos.x, pos.z, 2);
+			this.context.dot(pos.x, pos.y, 2);
 		}
 	}
 });
