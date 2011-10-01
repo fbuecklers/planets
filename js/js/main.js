@@ -52,6 +52,14 @@ function createMap() {
 	return stars;
 }
 
+var route = new Route(new Vector(1500, 0, 0), new Vector(0, 0, 0));
+route.add(new Vector(0, 1500, 0));
+route.add(new Vector(0, 200, 400));
+route.add(new Vector(-500, -300, 1000));
+route.add(new Vector(400, 400, 800));
+
+var shipRoute = new ShipRoute(null, route);
+
 var map;
 window.onload = function() {
 	var canvas = document.getElementById('planets');
@@ -254,6 +262,14 @@ var Map = Object.inherit({
 		return this.matrix.dot(v.sub(this.center));
 	},
 	
+	transformAll: function(points) {
+		var tpoints = [];
+		for (var i = 0, point; point = points[i]; ++i)
+			tpoints[i] = this.transform(point);
+		
+		return tpoints;
+	},
+	
 	updateRaster: function() {
 		this.raster = new RasterMap();
 		
@@ -331,58 +347,36 @@ var Map = Object.inherit({
 	},
 	
 	drawWay: function() {
-		var points = [
-		    new Vector(1500, 0, 0),
-		    new Vector(0, 0, 0),
-		    new Vector(0, 1500, 0),
-		    new Vector(0, 200, 400),
-		    new Vector(-500, -300, 1000),
-		    new Vector(400, 400, 800)
-		];
 		
-		var len = points.length;
-		var tpoints = [];
-		for (var i = 0; i < len; ++i)
-			tpoints[i] = this.transform(points[i]);
-		
-		var tangents = [tpoints[1].sub(tpoints[0])];
-		for (var i = 1; i < len - 1; ++i) {
-			tangents[i] = tpoints[i + 1].sub(tpoints[i - 1]);
+		var p = this.transformAll(shipRoute.paramaters);
+		for (var i = 0; i < p.length - 1; i+=3) {
+			var gradient = this.context.createLinearGradient(p[i].x, p[i].y, p[i + 3].x, p[i + 3].y);
+			shipRoute.createGradient(p[i], p[i + 3], gradient);
+//			gradient.addColorStop(0, 'white');
+//			gradient.addColorStop(.7, 'white');
+//			gradient.addColorStop(.7, 'transparent');
+			
+			this.context.beginPath();
+			this.context.moveTo(p[i].x, p[i].y);
+			this.context.strokeStyle = gradient;
+			this.context.bezierCurveTo(p[i + 1].x, p[i + 1].y, p[i + 2].x, p[i + 2].y, p[3 + i].x, p[3 + i].y);
+			this.context.stroke();
 		}
-		if (len > 2) 
-			tangents[i] = tpoints[len - 1].sub(tpoints[len - 2]);
-		
-		this.context.strokeStyle = 'white';
-		this.context.beginPath();
-		this.context.moveTo(tpoints[0].x, tpoints[0].y);
-		for (var i = 0; i < tpoints.length - 1; ++i) {
-			var abs = tpoints[i + 1].sub(tpoints[i]).abs();
-			var cp1 = tpoints[i].add(tangents[i].normalize(abs / 3));
-			var cp2 = tpoints[i + 1].sub(tangents[i + 1].normalize(abs / 3));
-			var p = tpoints[i + 1];
-			this.context.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p.x, p.y);
-		}
-		this.context.stroke();
 		
 		this.context.fillStyle = 'yellow';
-		for (var i = 0, pv; pv = tpoints[i]; ++i) {
-			this.context.dot(pv.x, pv.y, 2);
+		for (var i = 0; i < p.length; i+=3) {
+			this.context.dot(p[i].x, p[i].y, 2);
 		}
 		
 		this.context.fillStyle = 'red';
-		for (var i = 0; i < tpoints.length - 1; ++i) {
-			var abs = tpoints[i + 1].sub(tpoints[i]).abs();
-			var p0 = tpoints[i];
-			var p1 = p0.add(tangents[i].normalize(abs / 3));
-			var p3 = tpoints[i + 1];
-			var p2 = p3.sub(tangents[i + 1].normalize(abs / 3));
-			
-			var t = .5;
-			var pos = p0.scalar(Math.pow(1 - t, 3))
-				.add(p1.scalar(3 * t * Math.pow(1 - t, 2)))
-				.add(p2.scalar(3 * Math.pow(t, 2) * (1 - t)))
-				.add(p3.scalar(Math.pow(t, 3)));
-			
+		for (var i = 0; i < (p.length - 1)/3; i++) {
+			var pos = this.transform(shipRoute.getPoint(.5, i));
+			this.context.dot(pos.x, pos.y, 2);
+		}
+		
+		this.context.fillStyle = 'blue';
+		for (var i = 0; i < 4; i++) {
+			var pos = this.transform(shipRoute.getPoint((i + 1) / 4));
 			this.context.dot(pos.x, pos.y, 2);
 		}
 	}
