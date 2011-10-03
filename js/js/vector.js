@@ -75,6 +75,43 @@ var Matrix = Object.inherit({
 		return new matrix.constructor(newArray);
 	},
 	
+	transpose: function() {
+		var newArray = [];
+		for (var i = 0; i < this.columns; ++i) {
+			var arr = newArray[i] = [];
+			for (var j = 0; j < this.rows; ++j) {
+				arr[j] = this.array[j][i];
+			}
+		}
+		return new Matrix(newArray);
+	},
+	
+	det: function() {
+		if (this.rows != 3 || this.columns != 3)
+			throw new Error('Determinant is only implemented for 3x3 matrices');
+		
+		var sum = 0;
+		for (var i = 0; i < 3; i++) {
+			var pro = 1; 
+			for (var j = 0; j < 3; ++j)
+				pro *= this.array[i][(i + j) % 3];
+			sum += pro;
+		}
+		
+		for (var i = 0; i < 3; i++) {
+			var pro = 1; 
+			for (var j = 2; j > -1; --j)
+				pro *= this.array[i][(i + 3 - j) % 3];
+			sum -= pro;
+		}
+		
+		return sum;
+	},
+	
+	inverse: function() {
+		
+	},
+	
 	scale: function(scale) {
 		return new Matrix(
 	  	    [scale, 0, 0],
@@ -215,7 +252,7 @@ var Vector = Matrix.inherit({
 			
 			return dot;
 		} else {
-			return superCall(v);
+			return this.superCall(v);
 		}
 	},
 

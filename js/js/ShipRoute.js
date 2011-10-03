@@ -57,29 +57,33 @@ var ShipRoute = Object.inherit({
 			var p = directionVector.dot(start) / directionVector.dot(directionVector);
 			var q = (start.dot(start) - rad * rad)/directionVector.dot(directionVector);
 			var sqrt = Math.sqrt(p * p - q);
+			
+			var modified = false;
 			if (sqrt !== Number.NaN){
 				var out = -p + sqrt; 
 				var into = -p - sqrt;
-				
-				if (start.abs() > rad && target.abs() > rad){
-					gradient.addColorStop( 0, 'transparent');
-					gradient.addColorStop( into, 'transparent');
-				  	gradient.addColorStop( into, 'white');
-				  	gradient.addColorStop( out, 'white')
-				  	gradient.addColorStop( out, 'transparent');
-				} else if (start.abs() > rad){
+			
+				if (start.abs() > rad && 0 < into && into < 1){
 			  		gradient.addColorStop( 0, 'transparent');
 			  		gradient.addColorStop( into, 'transparent');
 			  		gradient.addColorStop( into, 'white');
-				} else {
-					gradient.addColorStop( 0, 'white');
+			  		modified = true;
+				}
+				
+				if (target.abs() > rad && 0 < out && out < 1){
+					if (!modified) {				
+						gradient.addColorStop( 0, 'white');
+					}
+					
 					gradient.addColorStop( out, 'white');
 					gradient.addColorStop( out, 'transparent');
+					modified = true;
 				}
-			} else {
+			}
+				
+			if (!modified) {
 				gradient.addColorStop(0, 'transparent');
 			}
-		
 		}
 	},
 	
