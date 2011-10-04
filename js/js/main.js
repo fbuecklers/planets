@@ -70,7 +70,7 @@ window.onload = function() {
 	route.add(new Vector(400, 400, 800));
 
 	map.addComponent(new MapRoute(route));
-	
+	map.addComponent(new MapCoordinate());
 	console.log('start');
 	
 	map.draw();
@@ -145,6 +145,9 @@ var Map = MapComponent.inherit({
 			this.center = this.center.normalize((1 - this.zoom) * this.size);
 		}
 		
+		for (var i = 0, c; c = this.components[i]; ++i)
+			c.zoom();
+		
 		this.draw();
 		
 		this.element.removeEventListener('mousemove', this.onOver, false);
@@ -152,9 +155,6 @@ var Map = MapComponent.inherit({
 		this.timer = window.setTimeout(this.onWheelTimer, 1000);
 		
 		e.preventDefault();
-		
-		for (var i = 0, c; c = this.components[i]; ++i)
-			c.zoom();
 	},
 	
 	onWheelTimer: function() {
@@ -282,30 +282,6 @@ var Map = MapComponent.inherit({
 				c.draw();
 			}
 		}
-		
-		var x = this.matrix.dot(new Vector(800, 0, 0));
-		
-		this.context.strokeStyle = 'rgb(255,0,0)';
-		this.context.beginPath();
-		this.context.moveTo(0, 0);
-		this.context.lineTo(x.x, x.y);
-		this.context.stroke();
-		
-		var y = this.matrix.dot(new Vector(0, 800, 0));
-
-		this.context.strokeStyle = 'rgb(0,255,0)';
-		this.context.beginPath();
-		this.context.moveTo(0, 0);
-		this.context.lineTo(y.x, y.y);
-		this.context.stroke();
-		
-		var z = this.matrix.dot(new Vector(0, 0, 800));
-
-		this.context.strokeStyle = 'rgb(0,0,255)';
-		this.context.beginPath();
-		this.context.moveTo(0, 0);
-		this.context.lineTo(z.x, z.y);
-		this.context.stroke();
 	}
 });
 

@@ -44,11 +44,28 @@ var MapComponent = Component.inherit({
 	init: function(parentComponent) {
 		this.superCall(parentComponent);
 		
+		var map = null;
 		if (parentComponent instanceof Map) {
-			this.map = map;
+			map = parentComponent;
 		} else {
-			this.map = parentComponent.map;
+			map = parentComponent.map;
 		}
+		
+		if (map && map != this.map) {
+			this.map = map;
+			this.context = map.context;
+			
+			for (var i = 0, c; c = this.components[i]; ++i) {
+				c.init(this);
+			}
+			
+			this.update();
+		}
+	},
+	
+	update: function() {
+		for (var i = 0, c; c = this.components[i]; ++i)
+			c.update();
 	},
 	
 	draw: function() {},
@@ -64,8 +81,7 @@ var MapStar = MapComponent.inherit({
 		this.addEventListener('over', this.over, false);
 	},
 	
-	init: function(parentComponent) {
-		this.superCall(parentComponent);
+	update: function() {
 		this.zoom();
 	},
 	
@@ -75,10 +91,10 @@ var MapStar = MapComponent.inherit({
 		box.style.left = e.mouse.x + 'px';
 		box.style.top = e.mouse.y + 'px';
 		
-		this.map.context.beginPath();
-		this.map.context.strokeStyle = 'red';
-		this.map.context.arc(this.bounds.x, this.bounds.y, 10, 0, Math.PI * 2);
-		this.map.context.stroke();
+		this.context.beginPath();
+		this.context.strokeStyle = 'red';
+		this.context.arc(this.bounds.x, this.bounds.y, 10, 0, Math.PI * 2);
+		this.context.stroke();
 	},
 	
 	zoom: function() {
@@ -99,12 +115,12 @@ var MapStar = MapComponent.inherit({
 	},
 	
 	draw: function() {
-		this.map.context.fillStyle = 'white';
-		this.map.context.strokeStyle = 'white';
-		this.map.context.font = '12px Verdana';
+		this.context.fillStyle = 'white';
+		this.context.strokeStyle = 'white';
+		this.context.font = '12px Verdana';
 		
 		var dot = (.25 + (this.bounds.z + 400) / 800 * 2) / this.map.zoom;
-		this.map.context.dot(this.bounds.x, this.bounds.y, dot);
+		this.context.dot(this.bounds.x, this.bounds.y, dot);
 	}
 });
 
@@ -124,11 +140,6 @@ var MapRoute = MapComponent.inherit({
 		this.addEventListener('beginMove', this.beginMove, false);
 		this.addEventListener('move', this.move, false);
 		this.addEventListener('endMove', this.endMove, false);
-	},
-	
-	init: function(parentComponent) {
-		this.superCall(parentComponent);
-		this.zoom();
 	},
 	
 	over: function() {
@@ -163,32 +174,36 @@ var MapRoute = MapComponent.inherit({
 			var cp1 = this.tangnts[i * 2];
 			var cp2 = this.tangnts[i * 2 + 1];
 			
-			this.map.context.beginPath();
-			this.map.context.moveTo(p1.x, p1.y);
-			this.map.context.strokeStyle = this.gradients[i];
-			this.map.context.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y);
-			this.map.context.stroke();
+			this.context.beginPath();
+			this.context.moveTo(p1.x, p1.y);
+			this.context.strokeStyle = this.gradients[i];
+			this.context.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y);
+			this.context.stroke();
 		}
 		
-		this.map.context.fillStyle = 'yellow';
+		this.context.fillStyle = 'yellow';
 		for (var i = 0, p; p = this.points[i]; ++i) {
-			this.map.context.dot(p.x, p.y, 2);
+			this.context.dot(p.x, p.y, 2);
 		}
 		
-		this.map.context.fillStyle = 'red';
+		this.context.fillStyle = 'red';
 		for (var i = 0, p; p = this.middlePoints[i]; ++i) {
-			this.map.context.dot(p.x, p.y, 2);
+			this.context.dot(p.x, p.y, 2);
 		}
 		
-		this.map.context.fillStyle = 'blue';
+		this.context.fillStyle = 'blue';
 		for (var i = 0; i < 4; i++) {
 			var pos = this.map.transform(this.route.getPoint((i + 1) / 4));
-			this.map.context.dot(pos.x, pos.y, 2);
+			this.context.dot(pos.x, pos.y, 2);
 		}
 	},
 	
 	update: function() {
-		this.points = this.map.transformAll(this.route.points);
+		this.zoom();
+	},
+	
+	rotate: function() {
+		this.points =  this.map.transformAll(this.route.points);
 		
 		this.tangnts = this.map.transformAll(this.route.tangents);
 		this.middlePoints = [];
@@ -202,15 +217,11 @@ var MapRoute = MapComponent.inherit({
 		this.components[i * 2].bounds = this.points[i];
 	},
 	
-	rotate: function() {
-		this.update();
-	},
-	
 	zoom: function() {
 		this.visible = false;
 		this.gradients = [];
 		
-		this.update();
+		this.rotate();
 		
 		for (var i = 0; i < this.points.length - 1; ++i) {
 			var start = this.points[i];
@@ -222,7 +233,7 @@ var MapRoute = MapComponent.inherit({
 	createGradient: function(start, target) {
 		var rad = 400;
 		
-		var gradient = this.map.context.createLinearGradient(start.x, start.y, target.x, target.y);
+		var gradient = this.context.createLinearGradient(start.x, start.y, target.x, target.y);
 		var modified = false;
 		if (start.abs() < rad && target.abs() < rad){
 			gradient.addColorStop(0, 'white');
@@ -273,5 +284,46 @@ var MapRoutePoint = MapComponent.inherit({
 		
 		this.index = index;
 		this.point = point;
+	}
+});
+
+var MapCoordinate = MapComponent.inherit({
+	initialize: function() {
+		this.superCall();
+		
+		this.center = new Vector(310, -310, 0);
+		this.visible = true;
+	},
+	
+	update: function() {
+		this.rotate();
+	},
+	
+	rotate: function() {
+		this.x = this.map.matrix.dot(new Vector(this.map.radius / 10, 0, 0));
+		this.y = this.map.matrix.dot(new Vector(0, this.map.radius / 10, 0));
+		this.z = this.map.matrix.dot(new Vector(0, 0, this.map.radius / 10));
+	},
+	
+	draw: function() {
+		this.drawLine(this.x, 'rgb(255,0,0)', 'x');
+		this.drawLine(this.y, 'rgb(0,255,0)', 'y');
+		this.drawLine(this.z, 'rgb(0,0,255)', 'z');
+	},
+	
+	drawLine: function(line, color, label) {
+		var linePoint = line.add(this.center);
+		this.context.strokeStyle = color;
+		this.context.beginPath();
+		this.context.moveTo(this.center.x, this.center.y);
+		this.context.lineTo(linePoint.x, linePoint.y);
+		this.context.stroke();
+		
+		var textPoint = line.scale(1.3).add(this.center);
+		this.context.font = 'Verdana';
+		this.context.textAlign = 'center';
+		this.context.baseLine = 'middle';
+		this.context.fillStyle = 'white';
+		this.context.fillText(label, textPoint.x, textPoint.y);
 	}
 });

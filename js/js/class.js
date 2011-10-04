@@ -57,8 +57,8 @@ Function.prototype.inherit = function(objectDescriptor) {
 
 Object.defineProperty(Object.prototype, 'superCall', {
 	enumerable: false,
-	value: function() {
-		var caller = arguments.callee.caller;
+	value: function superCall() {
+		var caller = superCall.caller;
 		
 		if (caller && caller.methodName) {
 			var methodName = caller.methodName;
@@ -70,8 +70,7 @@ Object.defineProperty(Object.prototype, 'superCall', {
 			proto = Object.getPrototypeOf(proto);
 			
 			return proto[caller.methodName].apply(this, arguments);
-		}
-		else {		
+		} else {		
 			throw new ReferenceError("superCall can not be called outside of object inheritance");
 		}
 	}
