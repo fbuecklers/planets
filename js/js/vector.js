@@ -91,17 +91,17 @@ var Matrix = Object.inherit({
 			throw new Error('Determinant is only implemented for 3x3 matrices');
 		
 		var sum = 0;
-		for (var i = 0; i < 3; i++) {
+		for (var i = 0; i < 3; ++i) {
 			var pro = 1; 
 			for (var j = 0; j < 3; ++j)
-				pro *= this.array[i][(i + j) % 3];
+				pro *= this.array[j][(i + j) % 3];
 			sum += pro;
 		}
 		
-		for (var i = 0; i < 3; i++) {
+		for (var i = 0; i < 3; ++i) {
 			var pro = 1; 
-			for (var j = 2; j > -1; --j)
-				pro *= this.array[i][(i + 3 - j) % 3];
+			for (var j = 0; j < 3; ++j)
+				pro *= this.array[j][(5 - i - j) % 3];
 			sum -= pro;
 		}
 		
