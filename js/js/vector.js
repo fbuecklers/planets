@@ -94,15 +94,13 @@ var Matrix = Object.inherit({
 		for (var i = 0; i < 3; ++i) {
 			var pro = 1; 
 			for (var j = 0; j < 3; ++j)
-				
-				pro *= this.array[i+j][(i + j) % 3];
 			sum += pro;
 		}
 		
 		for (var i = 0; i < 3; ++i) {
-			var pro = 1; 
-			for (var j = 2; j > -1; --j)
-				pro *= this.array[i][(j + 3 - i) % 3];
+			var pro = 1;
+			for (var j = 0; j < 3; ++j)
+				pro *= this.array[j][(5 - i - j) % 3];
 			sum -= pro;
 		}
 		
