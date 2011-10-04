@@ -58,8 +58,6 @@ var MapComponent = Component.inherit({
 			for (var i = 0, c; c = this.components[i]; ++i) {
 				c.init(this);
 			}
-			
-			this.update();
 		}
 	},
 	
@@ -77,8 +75,10 @@ var MapStar = MapComponent.inherit({
 	initialize: function(star) {
 		this.superCall();
 		this.star = star;
+		this.active = false;
 		
 		this.addEventListener('over', this.over, false);
+		this.addEventListener('out', this.out, false);
 	},
 	
 	update: function() {
@@ -91,10 +91,14 @@ var MapStar = MapComponent.inherit({
 		box.style.left = e.mouse.x + 'px';
 		box.style.top = e.mouse.y + 'px';
 		
-		this.context.beginPath();
-		this.context.strokeStyle = 'red';
-		this.context.arc(this.bounds.x, this.bounds.y, 10, 0, Math.PI * 2);
-		this.context.stroke();
+		this.active = true;
+	},
+	
+	out: function(e) {
+		var box = document.getElementById('box');
+		box.innerHTML = '';
+		
+		this.active = false;
 	},
 	
 	zoom: function() {
@@ -121,6 +125,13 @@ var MapStar = MapComponent.inherit({
 		
 		var dot = (.25 + (this.bounds.z + 400) / 800 * 2) / this.map.zoom;
 		this.context.dot(this.bounds.x, this.bounds.y, dot);
+		
+		if (this.active) {
+			this.context.beginPath();
+			this.context.strokeStyle = 'red';
+			this.context.arc(this.bounds.x, this.bounds.y, 10, 0, Math.PI * 2);
+			this.context.stroke();
+		}
 	}
 });
 
@@ -168,17 +179,24 @@ var MapRoute = MapComponent.inherit({
 	},
 	
 	draw: function() {
+		this.context.save();
+		this.context.beginPath();
+		this.context.arc(0, 0, 400, 0, Math.PI * 2, false);
+		this.context.clip();
+		
 		for (var i = 0; i < this.points.length - 1; ++i) {
-			var p1 = this.points[i];
-			var p2 = this.points[i + 1];
-			var cp1 = this.tangnts[i * 2];
-			var cp2 = this.tangnts[i * 2 + 1];
-			
-			this.context.beginPath();
-			this.context.moveTo(p1.x, p1.y);
-			this.context.strokeStyle = this.gradients[i];
-			this.context.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y);
-			this.context.stroke();
+			if (this.visiblePoints[i] && this.visiblePoints[i + 1]) {				
+				var p1 = this.points[i];
+				var p2 = this.points[i + 1];
+				var cp1 = this.tangnts[i * 2];
+				var cp2 = this.tangnts[i * 2 + 1];
+				
+				this.context.beginPath();
+				this.context.moveTo(p1.x, p1.y);
+				this.context.strokeStyle = 'white';
+				this.context.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y);
+				this.context.stroke();
+			}
 		}
 		
 		this.context.fillStyle = 'yellow';
@@ -196,6 +214,8 @@ var MapRoute = MapComponent.inherit({
 			var pos = this.map.transform(this.route.getPoint((i + 1) / 4));
 			this.context.dot(pos.x, pos.y, 2);
 		}
+		
+		this.context.restore();
 	},
 	
 	update: function() {
@@ -219,62 +239,47 @@ var MapRoute = MapComponent.inherit({
 	
 	zoom: function() {
 		this.visible = false;
-		this.gradients = [];
+		this.visiblePoints = [];
 		
 		this.rotate();
 		
 		for (var i = 0; i < this.points.length - 1; ++i) {
 			var start = this.points[i];
 			var target = this.points[i + 1];
-			this.gradients.push(this.createGradient(start, target));
+			var visible = this.isLineVisible(start, target);
+			
+			this.visible |= visible;
+			this.visiblePoints[i] |= visible;
+			this.visiblePoints[i + 1] |= visible;
 		}
 	},
 	
-	createGradient: function(start, target) {
+	isLineVisible: function(start, target) {
 		var rad = 400;
 		
-		var gradient = this.context.createLinearGradient(start.x, start.y, target.x, target.y);
-		var modified = false;
 		if (start.abs() < rad && target.abs() < rad){
-			gradient.addColorStop(0, 'white');
-			modified = true;
+			return true;
 		} else {
 			var directionVector = target.sub(start);
 			var p = directionVector.dot(start) / directionVector.dot(directionVector);
 			var q = (start.dot(start) - rad * rad)/directionVector.dot(directionVector);
 			var sqrt = Math.sqrt(p * p - q);
 			
-			if (sqrt !== Number.NaN){
+			if (sqrt !== Number.NaN) {
 				var out = -p + sqrt; 
 				var into = -p - sqrt;
 			
 				if (start.abs() > rad && 0 < into && into < 1){
-			  		gradient.addColorStop( 0, 'transparent');
-			  		gradient.addColorStop( into, 'transparent');
-			  		gradient.addColorStop( into, 'white');
-			  		modified = true;
+			  		return true;
 				}
 				
 				if (target.abs() > rad && 0 < out && out < 1){
-					if (!modified) {				
-						gradient.addColorStop( 0, 'white');
-					}
-					
-					gradient.addColorStop( out, 'white');
-					gradient.addColorStop( out, 'transparent');
-					modified = true;
+					return true;
 				}
 			}
-				
-			if (!modified) {
-				gradient.addColorStop(0, 'transparent');
-			}
-			
 		}
 		
-		this.visible |= modified;
-		
-		return gradient;
+		return false;
 	}
 });
 

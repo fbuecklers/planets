@@ -73,8 +73,7 @@ window.onload = function() {
 	map.addComponent(new MapCoordinate());
 	console.log('start');
 	
-	map.draw();
-	map.updateRaster();
+	map.update();
 };
 
 var Map = MapComponent.inherit({
@@ -87,8 +86,8 @@ var Map = MapComponent.inherit({
 		this.radius = this.size;
 		this.center = Vector.ZERO;
 		this.zoom = 1;
-		this.currentComponent = null;
-		this.raster = null;
+		
+		this.eventDispatcher = new MapEventDispatcher(this);
 		
 		this.context.translate(400, 400);
 		this.matrix = new Matrix(
@@ -96,11 +95,6 @@ var Map = MapComponent.inherit({
 			[0, -400 / this.radius, 0], 
 			[0, 0, 400 / this.radius]
 		);
-		
-		element.addEventListener('mousedown', this.onBeginMove, false);
-		element.addEventListener('mousemove', this.onOver, false);
-		element.addEventListener('mousewheel', this.onWheel, false);
-		element.addEventListener('DOMMouseScroll', this.onWheel, false);
 	},
 	
 	reset: function() {
@@ -108,14 +102,10 @@ var Map = MapComponent.inherit({
 		this.matrix = null;
 	},
 	
-	onWheel: function(e) {
-		var direction = e.wheelDelta? e.wheelDelta: -e.detail;
-		var delta = direction > 0? 2: -2;
+	wheel : function(e) {
+		var delta = e.mouseDelta;
 		var oldZoom = this.zoom;
-//		
-//		if (delta > 5)
-//			delta = 5;
-//		
+		
 		this.zoom -= delta / 50;
 		if (this.zoom < 0.05)
 			this.zoom = 0.05;
@@ -126,13 +116,13 @@ var Map = MapComponent.inherit({
 		this.matrix = this.matrix.scale(oldZoom / this.zoom);
 		this.radius = this.size * this.zoom;
 		
-		if (this.currentComponent instanceof MapStar && this.center !== this.currentComponent.star.position) {
+		if (e.target instanceof MapStar && this.center !== e.target.star.position) {
 			if (oldZoom > this.zoom) {
-				var cp = this.currentComponent.star.position.sub(this.center);
+				var cp = e.target.star.position.sub(this.center);
 				var step = cp.normalize(this.size * (oldZoom - this.zoom));
 				
 				if (step.abs() > cp.abs()) {
-					this.center = this.currentComponent.star.position;
+					this.center = e.target.star.position;
 				} else {			
 					this.center = this.center.add(step);
 				}
@@ -149,59 +139,14 @@ var Map = MapComponent.inherit({
 			c.zoom();
 		
 		this.draw();
-		
-		this.element.removeEventListener('mousemove', this.onOver, false);
-		window.clearTimeout(this.timer);
-		this.timer = window.setTimeout(this.onWheelTimer, 1000);
-		
-		e.preventDefault();
 	},
 	
-	onWheelTimer: function() {
-		this.updateRaster();
-		this.element.addEventListener('mousemove', this.onOver, false);
+	endWheel: function() {
+		this.eventDispatcher.update();
 	},
 	
-	onOver: function(e) {
-		var mousePosition = this.getEventMousePosition(e);
-		this.currentComponent = this.raster.get(mousePosition.x, mousePosition.y);
-		if (!this.currentComponent) {
-			this.currentComponent = this;
-		}
-		
+	over: function() {
 		this.draw();
-		
-		var evt = new MapEvent('over', mousePosition);
-		this.currentComponent.dispatchEvent(evt);
-	},
-	
-	onBeginMove: function(e) {
-		document.addEventListener('mousemove', this.onMove, false);
-		document.addEventListener('mouseup', this.onEndMove, false);
-		this.element.removeEventListener('mousemove', this.onOver, false);
-		
-		var evt = new MapEvent('beginMove', this.getEventMousePosition(e));
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.beginMove(evt);
-		}
-	},
-	
-	onMove: function(e) {
-		var evt = new MapEvent('move', this.getEventMousePosition(e));
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.move(evt);
-		}
-	},
-	
-	onEndMove: function(e) {
-		document.removeEventListener('mousemove', this.onMove, false);
-		document.removeEventListener('mouseup', this.onEndMove, false);
-		this.element.addEventListener('mousemove', this.onOver, false);
-		
-		var evt = new MapEvent('endMove', this.getEventMousePosition(e));
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.endMove(evt);
-		}
 	},
 	
 	last: null,
@@ -243,7 +188,7 @@ var Map = MapComponent.inherit({
 	},
 	
 	endMove: function(e) {
-		this.updateRaster();
+		this.eventDispatcher.update();
 	},
 	
 	transform: function(v) {
@@ -258,20 +203,11 @@ var Map = MapComponent.inherit({
 		return tpoints;
 	},
 	
-	getEventMousePosition: function(e) {
-		var x = e.clientX - this.element.offsetLeft - 400;
-		var y = e.clientY - this.element.offsetTop - 400; 
-		return new Vector(x, y);
-	},
-	
-	updateRaster: function() {
-		this.raster = new RasterMap();
+	update: function() {
+		this.superCall();
 		
-		for (var i = 0, c; c = this.components[i]; ++i) {
-			if (c.visible) {
-				this.raster.put(c);
-			}
-		}
+		this.draw();
+		this.eventDispatcher.update();
 	},
 	
 	draw: function() {
@@ -286,13 +222,130 @@ var Map = MapComponent.inherit({
 });
 
 var MapEvent = Event.inherit({
-	initialize: function(type, mouse) {
+	initialize: function(type, mouse, mouseDelta) {
 		this.initEvent(type, true, true);
-		this.mouse = mouse;
+		this.mouse = mouse? mouse: null;
+		this.mouseDelta = mouseDelta? mouseDelta: 0;
 	}
 });
 
+var MapEventDispatcher = Object.inherit({
+	initialize: function(map) {
+		this.map = map;
+		this.element = map.element;
+		this.currentComponent = map;
+		this.raster = null;
+		
+		this.handleOver = true;
+		this.mousePosition = null;
 
+		this.element.addEventListener('mousedown', this.onBeginMove, false);
+		this.element.addEventListener('mousemove', this.onMouseMove, false);
+		this.element.addEventListener('mousewheel', this.onWheel, false);
+		this.element.addEventListener('DOMMouseScroll', this.onWheel, false);
+	},
+	
+	onWheel: function(e) {
+		this.updateMousePosition(e);
+		
+		var direction = e.wheelDelta? e.wheelDelta: -e.detail;
+		var delta = direction > 0? 2: -2;
+		
+		this.handleOver = false;
+		
+		window.clearTimeout(this.timer);
+		this.timer = window.setTimeout(this.onWheelTimer, 1000);
+		
+		var evt = new MapEvent('wheel', this.mousePosition, delta);
+		if (!this.currentComponent.dispatchEvent(evt)) {
+			this.map.wheel(evt);
+		}
+		
+		e.preventDefault();
+	},
+	
+	onWheelTimer: function(e) {
+		this.handleOver = true;
+
+		var evt = new MapEvent('endWheel', this.mousePosition);
+		if (!this.map.dispatchEvent(evt)) {
+			this.map.endWheel(evt);
+		}
+	},
+	
+	onMouseMove: function(e) {
+		this.updateMousePosition(e);
+		
+		if (this.handleOver) {			
+			var lastComponent = this.currentComponent;
+			this.currentComponent = this.raster.get(this.mousePosition.x, this.mousePosition.y);
+			if (!this.currentComponent) {
+				this.currentComponent = this.map;
+			}
+			
+			if (this.currentComponent != lastComponent) {				
+				var evt = new MapEvent('out', this.mousePosition);
+				lastComponent.dispatchEvent(evt);
+				
+				evt = new MapEvent('over', this.mousePosition);
+				if (!this.currentComponent.dispatchEvent(evt)) {
+					this.map.over(evt);
+				}
+			}
+		}
+	},
+	
+	onBeginMove: function(e) {
+		this.updateMousePosition(e);
+		
+		document.addEventListener('mousemove', this.onMove, false);
+		document.addEventListener('mouseup', this.onEndMove, false);
+		this.element.removeEventListener('mousemove', this.onMouseMove, false);
+		
+		var evt = new MapEvent('beginMove', this.mousePosition);
+		if (!this.currentComponent.dispatchEvent(evt)) {
+			this.map.beginMove(evt);
+		}
+	},
+	
+	onMove: function(e) {
+		this.updateMousePosition(e);
+		
+		var evt = new MapEvent('move', this.mousePosition);
+		if (!this.currentComponent.dispatchEvent(evt)) {
+			this.map.move(evt);
+		}
+	},
+	
+	onEndMove: function(e) {
+		this.updateMousePosition(e);
+		
+		document.removeEventListener('mousemove', this.onMove, false);
+		document.removeEventListener('mouseup', this.onEndMove, false);
+		this.element.addEventListener('mousemove', this.onMouseMove, false);
+		
+		var evt = new MapEvent('endMove', this.mousePosition);
+		if (!this.currentComponent.dispatchEvent(evt)) {
+			this.map.endMove(evt);
+		}
+	},
+	
+	update: function() {
+		this.raster = new RasterMap();
+		
+		for (var i = 0, c; c = this.map.components[i]; ++i) {
+			if (c.visible) {
+				this.raster.put(c);
+			}
+		}
+	},
+	
+	updateMousePosition: function(e) {
+		var x = e.clientX - this.element.offsetLeft - 400;
+		var y = e.clientY - this.element.offsetTop - 400; 
+		this.mousePosition = new Vector(x, y);
+	},
+});
 
 
 var counter = 0;
@@ -311,7 +364,7 @@ function run() {
 
 var RasterMap = Object.inherit({
 	initialize: function() {
-		this.array = {};
+		this.array = new Array(6400);
 	},
 	
 	get: function(x, y) {
