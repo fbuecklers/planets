@@ -166,15 +166,23 @@ var MapRoute = MapComponent.inherit({
 	move: function(e) {
 		if (e.target.point) {
 			var p = this.points[e.target.index];
-			this.points[e.target.index] = new Vector(e.mouse.x, e.mouse.y, p.z);
+			var v = this.map.inverseTransform(new Vector(e.mouse.x, e.mouse.y, p.z));
+			this.route.points[e.target.index] = v;
+			this.route.updateTangents();
+			
+			this.update();
+			this.map.draw();
 		}
 		
-		this.map.draw();
 		
 		e.preventDefault();
 	},
 	
 	endMove: function(e) {
+		if (e.target.point) {
+			this.route.updateLength();
+		}
+		
 		e.preventDefault();
 	},
 	

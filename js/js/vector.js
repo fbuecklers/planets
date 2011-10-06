@@ -94,6 +94,7 @@ var Matrix = Object.inherit({
 		for (var i = 0; i < 3; ++i) {
 			var pro = 1; 
 			for (var j = 0; j < 3; ++j)
+				pro *= this.array[j][(i + j) % 3];
 			sum += pro;
 		}
 		
@@ -108,6 +109,7 @@ var Matrix = Object.inherit({
 	},
 	
 	inverse: function() { 
+		
 		var adj = new Matrix (
 		  [[this.array[1][1]*this.array[2][2]-this.array[1][2]*this.array[2][1],
             this.array[0][2]*this.array[2][1]-this.array[0][1]*this.array[2][2],
@@ -118,7 +120,7 @@ var Matrix = Object.inherit({
 	       [this.array[1][0]*this.array[2][1]-this.array[1][1]*this.array[2][0],
 	        this.array[0][1]*this.array[2][0]-this.array[0][0]*this.array[2][1],
 		    this.array[0][0]*this.array[1][1]-this.array[0][1]*this.array[1][0]]]);
-		return new Matrix (adj.scalar(this.det));
+		return adj.scalar(1/this.det());
 	},
 
 	
