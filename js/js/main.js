@@ -95,11 +95,13 @@ var Map = MapComponent.inherit({
 			[0, -400 / this.radius, 0], 
 			[0, 0, 400 / this.radius]
 		);
+		this.inverseMatrix = null;
 	},
 	
 	reset: function() {
 		this.context.clear();
 		this.matrix = null;
+		this.inverseMatrix = null;
 	},
 	
 	wheel : function(e) {
@@ -114,6 +116,7 @@ var Map = MapComponent.inherit({
 			this.zoom = 1.5;
 		
 		this.matrix = this.matrix.scale(oldZoom / this.zoom);
+		this.inverseMatrix = null;
 		this.radius = this.size * this.zoom;
 		
 		if (e.target instanceof MapStar && this.center !== e.target.star.position) {
@@ -179,6 +182,7 @@ var Map = MapComponent.inherit({
 			if (diff.y)
 				this.matrix = this.matrix.rotateX(-diff.y * Math.PI / 180);
 		}
+		this.inverseMatrix = null;
 		
 		for (var i = 0, c; c = this.components[i]; ++i)
 			c.rotate();
@@ -201,6 +205,13 @@ var Map = MapComponent.inherit({
 			tpoints[i] = this.transform(point);
 		
 		return tpoints;
+	},
+	
+	inverseTransform: function(v) {
+		if (!this.inverseMatrix){
+			this.inverseMatrix = this.matrix.inverse();
+		}
+		return this.inverseMatrix.dot(v).add(this.center);
 	},
 	
 	update: function() {
