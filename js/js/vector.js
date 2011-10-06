@@ -109,7 +109,7 @@ var Matrix = Object.inherit({
 	},
 	
 	inverse: function() {
-		
+		test
 	},
 	
 	scale: function(scale) {
