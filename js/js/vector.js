@@ -108,8 +108,7 @@ var Matrix = Object.inherit({
 		return sum;
 	},
 	
-	inverse: function() { 
-		
+	inverse: function() {
 		var adj = new Matrix (
 		  [[this.array[1][1]*this.array[2][2]-this.array[1][2]*this.array[2][1],
             this.array[0][2]*this.array[2][1]-this.array[0][1]*this.array[2][2],
@@ -294,4 +293,3 @@ Vector.ZERO = new Vector(0, 0, 0);
 Vector.X = new Vector(1, 0, 0);
 Vector.Y = new Vector(0, 1, 0);
 Vector.Z = new Vector(0, 0, 1);
-
