@@ -82,6 +82,7 @@ window.onload = function() {
 	console.log('start');
 	
 	map.update();
+	map.draw();
 };
 
 var Map = MapComponent.inherit({
@@ -96,7 +97,7 @@ var Map = MapComponent.inherit({
 		this.zoom = 1;
 		this.raster = null;
 		
-		this.eventDispatcher = new MapEventDispatcher(this);
+		this.eventDispatcher = new EventDispatcher(this);
 		
 		this.context.translate(400, 400);
 		this.matrix = new Matrix(
@@ -158,7 +159,7 @@ var Map = MapComponent.inherit({
 	},
 	
 	endWheel: function() {
-		this.eventDispatcher.update();
+		this.update();
 	},
 	
 	over: function() {
@@ -205,7 +206,7 @@ var Map = MapComponent.inherit({
 	},
 	
 	endMove: function(e) {
-		this.eventDispatcher.update();
+		this.update();
 	},
 	
 	transform: function(v) {
@@ -229,8 +230,6 @@ var Map = MapComponent.inherit({
 	
 	update: function() {
 		this.superCall();
-		
-		this.draw();
 		
 		this.raster = new RasterMap();
 		for (var i = 0, c; c = this.components[i]; ++i) {
