@@ -6,11 +6,15 @@ var Star = Object.inherit({
 	 * @param type
 	 * @param name
 	 */
-	initialize: function(position, name, type, planets) {
+	initialize: function(position, normal, name, type) {
 		this.position = position;
+		this.normal = normal;
 		this.type = type;
 		this.name = name;
-		this.planets = planets
+		this.planets = [];
+		
+		this.image = new Image();
+		this.image.src = 'img/sonne.png';
 	}
 });
 
@@ -23,9 +27,15 @@ var Planet = Object.inherit({
 	 * @param radius
 	 * @param type
 	 */
-	initialize: function(star, radius, type) {
+	initialize: function(star, normal, position, radius, days, img, type) {		
 		this.star = star;
+		this.normal = normal;
+		this.position = position;
 		this.radius = radius;
-		this.typ = typ;
+		this.days = days;
+		
+		this.image = new Image();
+		this.image.src = img;
+		this.type = type;
 	}
 });

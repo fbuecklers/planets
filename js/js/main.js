@@ -17,7 +17,7 @@ CanvasRenderingContext2D.prototype.dot = function(x, y, radius) {
 	this.fill();
 }
 
-function createMap() {
+function createMap(map) {
 	var radius = 3000;
 	var hyp = radius * radius;
 	
@@ -31,11 +31,21 @@ function createMap() {
 		
 		if (position.dot(position) < hyp) {
 			++i;
-			
 			var name = 'P4X' + pad(position.x) + pad(position.y) + pad(position.z);
-			var star = new Star(position, name);
+			var normal = new Vector(Math.random() * 10, Math.random() * 10, Math.random() * 10);
+			var star = new Star(position, normal, name);
+			map.addComponent(new MapStar(star));
 			
-			stars.push(star);
+			var planetsCount = 2 + Math.ceil(Math.random() * 10);
+			for (var j = 0; j < planetsCount; ++j) {
+				var n = normal.add(new Vector(Math.random() * 5, (Math.random() - .5) * 3, (Math.random() - .5) * 3)).normalize();
+				var r = (j + 1) - .4 + Math.random() * .8;
+				var p = n.cross(normal).normalize(r);
+				var planet = new Planet(star, n, p, r, 100 + Math.random() * 500, 'img/planet.png');
+				
+				star.planets.push(planet);
+			}
+			
 		}		
 	}
 	
@@ -59,9 +69,7 @@ window.onload = function() {
 	var canvas = document.getElementById('planets');
 	
 	map = new Map(canvas);
-	var stars = createMap();
-	for (var i = 0, s; s = stars[i]; ++i)
-		map.addComponent(new MapStar(s));
+	var stars = createMap(map);
 	
 	var route = new Route(null, new Vector(1500, 0, 0), new Vector(0, 0, 0));
 	route.add(new Vector(0, 1500, 0));
@@ -108,21 +116,21 @@ var Map = MapComponent.inherit({
 		var delta = e.mouseDelta;
 		var oldZoom = this.zoom;
 		
-		this.zoom -= delta / 50;
-		if (this.zoom < 0.05)
-			this.zoom = 0.05;
+		this.zoom += this.zoom * delta / 20;
+		if (this.zoom < .5)
+			this.zoom = .5;
 		
-		if (this.zoom > 1.5)
-			this.zoom = 1.5;
+		if (this.zoom > 3000)
+			this.zoom = 3000;
 		
-		this.matrix = this.matrix.scale(oldZoom / this.zoom);
+		this.matrix = this.matrix.scale(this.zoom / oldZoom);
 		this.inverseMatrix = null;
-		this.radius = this.size * this.zoom;
+		this.radius = this.size / this.zoom;
 		
 		if (e.target instanceof MapStar && this.center !== e.target.star.position) {
-			if (oldZoom > this.zoom) {
+			if (oldZoom < this.zoom) {
 				var cp = e.target.star.position.sub(this.center);
-				var step = cp.normalize(this.size * (oldZoom - this.zoom));
+				var step = cp.normalize(this.size / (oldZoom - this.zoom));
 				
 				if (step.abs() > cp.abs()) {
 					this.center = e.target.star.position;
@@ -132,10 +140,10 @@ var Map = MapComponent.inherit({
 			} 
 		}
 		
-		if (this.zoom >= 1) {
+		if (this.zoom < 1) {
 			this.center = Vector.ZERO;
 		} else if (this.center.abs() + this.radius > this.size) {
-			this.center = this.center.normalize((1 - this.zoom) * this.size);
+			this.center = this.center.normalize((1 - 1/this.zoom) * this.size);
 		}
 		
 		for (var i = 0, c; c = this.components[i]; ++i)

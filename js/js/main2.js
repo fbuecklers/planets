@@ -115,7 +115,7 @@ Planet.prototype.draw = function(positiveY) {
 }
 
 Planet.prototype.drawLine = function(positiveY) {
-	var n = this.n.transform(matrix);
+	var n = matrix.dot(this.n);
 	
 	var rotate = Math.atan2(n.x, n.z);
 	var scale = Math.acos(n.y);
@@ -142,7 +142,7 @@ Planet.prototype.drawLine = function(positiveY) {
 }
 
 Planet.prototype.drawPlanet = function(positiveY) {
-	var pos = this.pos.transform(matrix);
+	var pos = matrix.dot(this.pos);
 	if (pos.y > 0 && positiveY || pos.y <= 0 && !positiveY) {
 		var size = 20 - pos.y / 400 * 10;
 		con.drawImage(this.img, pos.x - size / 2, pos.z - size / 2, size, size);
@@ -172,7 +172,7 @@ function drawMap(alpha, beta, cent, zoom) {
 	
 	con.save();
 	con.translate(400, 400);
-	con.scale(1, -1);
+	con.scale(1, 1);
 	
 //	var x = mProdukt3x1to2D(matrix, [80, 0, 0]);
 //	
