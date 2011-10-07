@@ -10,9 +10,9 @@ var Field = Object.inherit({
 		this.selteneErden;
 		
 		this.belegt;
-		this.index = index
-		this.w = w
-		this.h = h
+		this.index = index;
+		this.w = w;
+		this.h = h;
 	}
 });
 
@@ -33,13 +33,12 @@ var PlanetSurface = Object.inherit({
 		this.height = height;
 		this.buildings = [];
 		this.fields = [];
-	for (var i = 0; i < height; ++i){
-		for (var j=0; j<width;++j){
-			this.fields[i*width+j] = new Field(i*width+j,j,i);
-			
+		
+		for (var i = 0; i < height; ++i){
+			for (var j=0; j<width;++j){
+				this.fields[i*width+j] = new Field(i*width+j, j, i);
+			}
 		}
-	}
-	
 	},
 	
 	addBuilding: function(newBuilding){
@@ -50,6 +49,7 @@ var PlanetSurface = Object.inherit({
 });
 var SurfaceMapField = Component.inherit({
 	initialize: function(field, building){
+		this.superCall();
 		
 		this.building = building? building:null;
 		this.field = field;
@@ -65,19 +65,31 @@ var SurfaceMap = Component.inherit({
 		this.context = element.getContext('2d');
 		this.offsetY = 0;
 		this.offsetX = 0;
-		this.fieldSize = Math.sqrt(164)
+		this.fieldSize = Math.sqrt(164);
 		this.eventDispatcher = new EventDispatcher(this);
 		
 		this.wAxis = new Vector(10, 8);
 		this.hAxis = new Vector(-10, 8);
+		
+		for (var i = 0, field; field = this.planetSurface.fields[i]; ++i) {
+			this.addComponent(new SurfaceMapField(field));
+		}
 	},
 	
 	getComponent: function(x, y) {
+		var dh = (this.wAxis.y * x - this.wAxis.x * y);
+		dh /= (this.hAxis.x * this.wAxis.y - this.hAxis.y * this.wAxis.x);
 		
+		var dw = (x - dh * this.hAxis.x) / this.wAxis.x; 
+		
+		var w = (Math.floor(dw) + this.planetSurface.width) % this.planetSurface.width;
+		var h = (Math.floor(dh) + this.planetSurface.height) % this.planetSurface.height;
+		return this.components[h * this.planetSurface.width + w];
 	},
 	
 	over: function(e) {
-		console.log(e.mouse);
+		this.draw();
+		this.drawField(e.target.field);
 	},
 	
 	beginMove: function(e) {
@@ -85,31 +97,6 @@ var SurfaceMap = Component.inherit({
 	},
 	
 	move: function(e) {
-		e.preventDefault();
-		var m = e.mouse;
-		
-		var dh = (this.wAxis.x * m.x - this.wAxis.y * m.y);
-		dh /= (this.hAxis.x * this.wAxis.y - this.hAxis.y * this.wAxis.x);
-		
-		var dw = (m.x - dh * this.hAxis.x) / this.wAxis.x; 
-		
-		var h = Math.floor(dh), w = Math.floor(dw);
-		
-//		e.mouse.abs() / Math.atan(.8)
-//		
-//		var w = this.wAxis.dot(e.mouse) / Math.cos(secangle);
-//		var h = this.hAxis.dot(e.mouse) / Math.cos(angle);
-		
-//		var distanceOfTLtoBR = e.mouse.dot(new Vector(1, .8).normalize());
-//		var distanceOfTRtoBL = e.mouse.dot(new Vector(-1, .8).normalize());
-//		var h = (Math.floor(distanceOfTLtoBR / this.fieldSize)+this.planetSurface.height)%this.planetSurface.height
-//		var w = (Math.floor(distanceOfTRtoBL / this.fieldSize)+this.planetSurface.width)%this.planetSurface.width		
-//		console.log(h*this.planetSurface.width+w);
-		var index = h * this.planetSurface.width + w;
-		console.log(w, h, index);
-		
-		this.draw()
-		this.drawField(this.planetSurface.fields[index]);
 		
 	},
 
@@ -117,7 +104,7 @@ var SurfaceMap = Component.inherit({
 //		console.log(Math.floor(e.mouse.y/20+(e.mouse.x%20))*this.planetSurface.width+Math.floor(e.mouse.x/20));
 	onClick: function(e) {
 		
-		e.mouse
+		
 	},
 	
 	endMove: function(e) {
@@ -165,9 +152,7 @@ var SurfaceMap = Component.inherit({
 		this.context.lineTo(x - 10, y + 8);
 		this.context.closePath();
 		this.context.fill();
-	},
-	wheel: function(){},
-	endWheel: function(){}
+	}
 });
 
 window.onload = function() {

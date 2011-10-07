@@ -112,10 +112,10 @@ Event.AT_TARGET = 2;
 Event.BUBBLING_PHASE = 3;
 
 var EventDispatcher = Object.inherit({
-	initialize: function(map) {
-		this.map = map;
-		this.element = map.element;
-		this.currentComponent = map;
+	initialize: function(component) {
+		this.component = component;
+		this.element = component.element;
+		this.currentComponent = component;
 		
 		this.handleOver = true;
 		this.mousePosition = null;
@@ -138,8 +138,8 @@ var EventDispatcher = Object.inherit({
 		this.timer = window.setTimeout(this.onWheelTimer, 1000);
 		
 		var evt = new MapEvent('wheel', this.mousePosition, delta);
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.map.wheel(evt);
+		if (!this.currentComponent.dispatchEvent(evt) && this.component.wheel) {
+			this.component.wheel(evt);
 		}
 		
 		e.preventDefault();
@@ -149,8 +149,8 @@ var EventDispatcher = Object.inherit({
 		this.handleOver = true;
 
 		var evt = new MapEvent('endWheel', this.mousePosition);
-		if (!this.map.dispatchEvent(evt)) {
-			this.map.endWheel(evt);
+		if (!this.component.dispatchEvent(evt) && this.component.endWheel) {
+			this.component.endWheel(evt);
 		}
 	},
 	
@@ -159,18 +159,20 @@ var EventDispatcher = Object.inherit({
 		
 		if (this.handleOver) {			
 			var lastComponent = this.currentComponent;
-			this.currentComponent = this.map.getComponent(this.mousePosition.x, this.mousePosition.y);
+			this.currentComponent = this.component.getComponent(this.mousePosition.x, this.mousePosition.y);
 			if (!this.currentComponent) {
-				this.currentComponent = this.map;
+				this.currentComponent = this.component;
 			}
 			
 			if (this.currentComponent != lastComponent) {				
 				var evt = new MapEvent('out', this.mousePosition);
-				lastComponent.dispatchEvent(evt);
+				if (!lastComponent.dispatchEvent(evt) && this.component.out) {
+					this.component.out(evt);
+				}
 				
 				evt = new MapEvent('over', this.mousePosition);
-				if (!this.currentComponent.dispatchEvent(evt)) {
-					this.map.over(evt);
+				if (!this.currentComponent.dispatchEvent(evt) && this.component.over) {
+					this.component.over(evt);
 				}
 			}
 		}
@@ -184,8 +186,8 @@ var EventDispatcher = Object.inherit({
 		this.element.removeEventListener('mousemove', this.onMouseMove, false);
 		
 		var evt = new MapEvent('beginMove', this.mousePosition);
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.map.beginMove(evt);
+		if (!this.currentComponent.dispatchEvent(evt) && this.component.beginMove) {
+			this.component.beginMove(evt);
 		}
 	},
 	
@@ -193,8 +195,8 @@ var EventDispatcher = Object.inherit({
 		this.updateMousePosition(e);
 		
 		var evt = new MapEvent('move', this.mousePosition);
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.map.move(evt);
+		if (!this.currentComponent.dispatchEvent(evt) && this.component.move) {
+			this.component.move(evt);
 		}
 	},
 	
@@ -206,8 +208,8 @@ var EventDispatcher = Object.inherit({
 		this.element.addEventListener('mousemove', this.onMouseMove, false);
 		
 		var evt = new MapEvent('endMove', this.mousePosition);
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.map.endMove(evt);
+		if (!this.currentComponent.dispatchEvent(evt) && this.component.endMove) {
+			this.component.endMove(evt);
 		}
 	},
 	
