@@ -293,4 +293,3 @@ Vector.ZERO = new Vector(0, 0, 0);
 Vector.X = new Vector(1, 0, 0);
 Vector.Y = new Vector(0, 1, 0);
 Vector.Z = new Vector(0, 0, 1);
-
