@@ -86,6 +86,7 @@ var Map = MapComponent.inherit({
 		this.radius = this.size;
 		this.center = Vector.ZERO;
 		this.zoom = 1;
+		this.raster = null;
 		
 		this.eventDispatcher = new MapEventDispatcher(this);
 		
@@ -96,6 +97,10 @@ var Map = MapComponent.inherit({
 			[0, 0, 400 / this.radius]
 		);
 		this.inverseMatrix = null;
+	},
+	
+	getComponent: function(x,y){
+		return this.raster.get(x, y);
 	},
 	
 	reset: function() {
@@ -218,7 +223,13 @@ var Map = MapComponent.inherit({
 		this.superCall();
 		
 		this.draw();
-		this.eventDispatcher.update();
+		
+		this.raster = new RasterMap();
+		for (var i = 0, c; c = this.components[i]; ++i) {
+			if (c.visible) {
+				this.raster.put(c);
+			}
+		}
 	},
 	
 	draw: function() {
@@ -232,131 +243,7 @@ var Map = MapComponent.inherit({
 	}
 });
 
-var MapEvent = Event.inherit({
-	initialize: function(type, mouse, mouseDelta) {
-		this.initEvent(type, true, true);
-		this.mouse = mouse? mouse: null;
-		this.mouseDelta = mouseDelta? mouseDelta: 0;
-	}
-});
 
-var MapEventDispatcher = Object.inherit({
-	initialize: function(map) {
-		this.map = map;
-		this.element = map.element;
-		this.currentComponent = map;
-		this.raster = null;
-		
-		this.handleOver = true;
-		this.mousePosition = null;
-
-		this.element.addEventListener('mousedown', this.onBeginMove, false);
-		this.element.addEventListener('mousemove', this.onMouseMove, false);
-		this.element.addEventListener('mousewheel', this.onWheel, false);
-		this.element.addEventListener('DOMMouseScroll', this.onWheel, false);
-	},
-	
-	onWheel: function(e) {
-		this.updateMousePosition(e);
-		
-		var direction = e.wheelDelta? e.wheelDelta: -e.detail;
-		var delta = direction > 0? 2: -2;
-		
-		this.handleOver = false;
-		
-		window.clearTimeout(this.timer);
-		this.timer = window.setTimeout(this.onWheelTimer, 1000);
-		
-		var evt = new MapEvent('wheel', this.mousePosition, delta);
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.map.wheel(evt);
-		}
-		
-		e.preventDefault();
-	},
-	
-	onWheelTimer: function(e) {
-		this.handleOver = true;
-
-		var evt = new MapEvent('endWheel', this.mousePosition);
-		if (!this.map.dispatchEvent(evt)) {
-			this.map.endWheel(evt);
-		}
-	},
-	
-	onMouseMove: function(e) {
-		this.updateMousePosition(e);
-		
-		if (this.handleOver) {			
-			var lastComponent = this.currentComponent;
-			this.currentComponent = this.raster.get(this.mousePosition.x, this.mousePosition.y);
-			if (!this.currentComponent) {
-				this.currentComponent = this.map;
-			}
-			
-			if (this.currentComponent != lastComponent) {				
-				var evt = new MapEvent('out', this.mousePosition);
-				lastComponent.dispatchEvent(evt);
-				
-				evt = new MapEvent('over', this.mousePosition);
-				if (!this.currentComponent.dispatchEvent(evt)) {
-					this.map.over(evt);
-				}
-			}
-		}
-	},
-	
-	onBeginMove: function(e) {
-		this.updateMousePosition(e);
-		
-		document.addEventListener('mousemove', this.onMove, false);
-		document.addEventListener('mouseup', this.onEndMove, false);
-		this.element.removeEventListener('mousemove', this.onMouseMove, false);
-		
-		var evt = new MapEvent('beginMove', this.mousePosition);
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.map.beginMove(evt);
-		}
-	},
-	
-	onMove: function(e) {
-		this.updateMousePosition(e);
-		
-		var evt = new MapEvent('move', this.mousePosition);
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.map.move(evt);
-		}
-	},
-	
-	onEndMove: function(e) {
-		this.updateMousePosition(e);
-		
-		document.removeEventListener('mousemove', this.onMove, false);
-		document.removeEventListener('mouseup', this.onEndMove, false);
-		this.element.addEventListener('mousemove', this.onMouseMove, false);
-		
-		var evt = new MapEvent('endMove', this.mousePosition);
-		if (!this.currentComponent.dispatchEvent(evt)) {
-			this.map.endMove(evt);
-		}
-	},
-	
-	update: function() {
-		this.raster = new RasterMap();
-		
-		for (var i = 0, c; c = this.map.components[i]; ++i) {
-			if (c.visible) {
-				this.raster.put(c);
-			}
-		}
-	},
-	
-	updateMousePosition: function(e) {
-		var x = e.clientX - this.element.offsetLeft - 400;
-		var y = e.clientY - this.element.offsetTop - 400; 
-		this.mousePosition = new Vector(x, y);
-	},
-});
 
 
 var counter = 0;
