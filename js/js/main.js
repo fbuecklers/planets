@@ -7,7 +7,7 @@ CanvasRenderingContext2D.prototype.resetTransform = function() {
 CanvasRenderingContext2D.prototype.clear = function() {
 	this.save();
 	this.resetTransform();
-	this.clearRect(0, 0, 800, 800);
+	this.clearRect(0, 0, this.canvas.width, this.canvas.height);
 	this.restore();
 }
 
@@ -89,6 +89,8 @@ var Map = MapComponent.inherit({
 	initialize: function(element) {
 		this.superCall();
 		
+		this.width = 800;
+		this.height = 800;
 		this.size = 3000;
 		this.element = element;
 		this.context = element.getContext('2d');
@@ -109,7 +111,7 @@ var Map = MapComponent.inherit({
 	},
 	
 	getComponent: function(x,y){
-		return this.raster.get(x, y);
+		return this.raster.getComponent(x, y);
 	},
 	
 	reset: function() {
@@ -136,7 +138,7 @@ var Map = MapComponent.inherit({
 		if (e.target instanceof MapStar && this.center !== e.target.star.position) {
 			if (oldZoom < this.zoom) {
 				var cp = e.target.star.position.sub(this.center);
-				var step = cp.normalize(this.size / (oldZoom - this.zoom));
+				var step = cp.normalize(this.size / (this.zoom - oldZoom));
 				
 				if (step.abs() > cp.abs()) {
 					this.center = e.target.star.position;
@@ -170,7 +172,7 @@ var Map = MapComponent.inherit({
 	rotate: false,
 	beginMove: function(e) {
 		this.last = e.mouse;
-		this.rotate = e.mouse.abs() > 300;
+		this.rotate = e.mouse.abs() > this.width * 3/4;
 	},
 	
 	move: function(e) {
@@ -234,7 +236,7 @@ var Map = MapComponent.inherit({
 		this.raster = new RasterMap();
 		for (var i = 0, c; c = this.components[i]; ++i) {
 			if (c.visible) {
-				this.raster.put(c);
+				this.raster.putComponent(c);
 			}
 		}
 	},
@@ -272,7 +274,7 @@ var RasterMap = Object.inherit({
 		this.array = new Array(6400);
 	},
 	
-	get: function(x, y) {
+	getComponent: function(x, y) {
 		var bucket = this.getBucket(x, y);
 		return bucket? bucket.component: null;
 	},
@@ -298,14 +300,14 @@ var RasterMap = Object.inherit({
 		return obj;
 	},
 
-	put: function(component) {
+	putComponent: function(component) {
 		if (component.bounds) {
 			this.putBound(component, component.bounds, 0);
 		} 
 		
 		if (component.components) {
 			for (var i = 0, c; c = component.components[i]; ++i) {
-				this.put(c);
+				this.putComponent(c);
 			}
 		}
 	},

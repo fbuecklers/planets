@@ -123,7 +123,17 @@ var EventDispatcher = Object.inherit({
 		this.element.addEventListener('mousedown', this.onBeginMove, false);
 		this.element.addEventListener('mousemove', this.onMouseMove, false);
 		this.element.addEventListener('mousewheel', this.onWheel, false);
+		this.element.addEventListener('click', this.onClick, false);
 		this.element.addEventListener('DOMMouseScroll', this.onWheel, false);
+	},
+	
+	onClick: function(e) {
+		this.updateMousePosition(e);
+		
+		var evt = new MapEvent('click', this.mousePosition);
+		if (!this.currentComponent.dispatchEvent(evt) && this.component.click) {
+			this.component.click(evt);
+		}
 	},
 	
 	onWheel: function(e) {
@@ -214,8 +224,8 @@ var EventDispatcher = Object.inherit({
 	},
 	
 	updateMousePosition: function(e) {
-		var x = e.clientX - this.element.offsetLeft - 400;
-		var y = e.clientY - this.element.offsetTop - 400; 
+		var x = e.pageX - this.element.offsetLeft - 400;
+		var y = e.pageY - this.element.offsetTop - 400; 
 		this.mousePosition = new Vector(x, y);
 	},
 });

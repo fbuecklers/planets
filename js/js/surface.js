@@ -23,7 +23,6 @@ var Building = Object.inherit({
 		this.position = null;
 		this.people = 0;
 	}
-	
 });
 
 
@@ -63,6 +62,7 @@ var SurfaceMap = Component.inherit({
 		this.planetSurface = planetSurface;
 		this.element = element;
 		this.context = element.getContext('2d');
+		
 		this.offsetY = 0;
 		this.offsetX = 0;
 		this.fieldSize = Math.sqrt(164);
@@ -77,19 +77,30 @@ var SurfaceMap = Component.inherit({
 	},
 	
 	getComponent: function(x, y) {
+		y += 464;
+		
 		var dh = (this.wAxis.y * x - this.wAxis.x * y);
 		dh /= (this.hAxis.x * this.wAxis.y - this.hAxis.y * this.wAxis.x);
 		
 		var dw = (x - dh * this.hAxis.x) / this.wAxis.x; 
 		
-		var w = (Math.floor(dw) + this.planetSurface.width) % this.planetSurface.width;
-		var h = (Math.floor(dh) + this.planetSurface.height) % this.planetSurface.height;
+		var w = Math.floor(dw);
+		var h = Math.floor(dh);
+		if (w < 0 || h < 0 || w > 47 || h > 47)
+			return null;
+		
 		return this.components[h * this.planetSurface.width + w];
 	},
 	
 	over: function(e) {
-		this.draw();
-		this.drawField(e.target.field);
+		if (e.target != this) {			
+			this.draw();
+			this.drawField(e.target.field);
+		}
+	},
+	
+	click: function(e) {
+		console.log(e.target.field);
 	},
 	
 	beginMove: function(e) {
@@ -99,16 +110,10 @@ var SurfaceMap = Component.inherit({
 	move: function(e) {
 		
 	},
-
-
-//		console.log(Math.floor(e.mouse.y/20+(e.mouse.x%20))*this.planetSurface.width+Math.floor(e.mouse.x/20));
-	onClick: function(e) {
-		
-		
-	},
 	
 	endMove: function(e) {
-//		e.preventDefault();
+		console.log('test');
+		e.preventDefault();
 	},
 	
 	draw: function(){
@@ -117,32 +122,32 @@ var SurfaceMap = Component.inherit({
 		this.context.beginPath();
 		this.context.strokeStyle = 'black';
 		this.context.lineWidth = 0.5;
-		for (var i=0;i<1800;i+=20){
-			this.context.moveTo(-1000+i, 0);
-			this.context.lineTo(0+i, 800);
+		for (var i = -4; i < 45; i++){
+			this.context.moveTo(360 - i * 10, i * 8 - 32);
+			this.context.lineTo(840 - i * 10, 352 + i * 8);
 
-			this.context.moveTo(1800-i, 0);
-			this.context.lineTo(800-i, 800);
-
+			this.context.moveTo(440 + i * 10, i * 8 - 32);
+			this.context.lineTo(i * 10 - 40, 352 + i * 8);
 		}
 		this.context.stroke();
+//		
+//		this.context.beginPath();
+//		this.context.strokeStyle = 'green';
+//		this.context.lineWidth = 2;
+//		this.context.moveTo(400, 400);
+//		var w = this.hAxis.scalar(400);
+//		this.context.lineTo(400 + w.x, 400 + w.y);
+//		this.context.stroke();
 		
-		this.context.beginPath();
-		this.context.strokeStyle = 'green';
-		this.context.lineWidth = 2;
-		this.context.moveTo(400, 400);
-		var w = this.hAxis.scalar(400);
-		this.context.lineTo(400 + w.x, 400 + w.y);
-		this.context.stroke();
-
 //		for (var i=0,field; field = this.planetSurface.fields[i]; i+=10){
 //		var field = this.planetSurface.fields[0];
 //			this.drawField(field);
 //		}
 	},
+	
 	drawField: function(field) {
-		var x = (field.h * -10 + field.w * 10 + 400)%800; 
-		var y = (field.h * 8 + field.w * 8 + 400)%800;
+		var x = 400 + (field.h * -10 + field.w * 10); 
+		var y = (field.h * 8 + field.w * 8) - 64;
 		
 		this.context.fillStyle = 'red';
 		this.context.beginPath();

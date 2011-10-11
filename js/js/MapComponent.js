@@ -165,7 +165,7 @@ var MapStar = MapComponent.inherit({
 		this.context.scale(1, -Math.cos(scale));
 
 		this.context.beginPath();
-		this.context.lineWidth = .8;
+		this.context.lineWidth = .02 * this.map.zoom;
 		this.context.strokeStyle = 'white';
 		
 		if (positive)
@@ -173,7 +173,7 @@ var MapStar = MapComponent.inherit({
 		else
 			this.context.arc(0, 0, planet.radius * this.map.zoom, Math.PI, Math.PI * 2, false);
 		
-		this.context.setTransform(1, 0, 0, 1, 0, 0);
+		this.context.resetTransform();
 		this.context.stroke();
 		this.context.restore();
 		
