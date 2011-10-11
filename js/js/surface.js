@@ -108,7 +108,7 @@ var SurfaceMap = Component.inherit({
 	},
 	
 	move: function(e) {
-		
+
 	},
 	
 	endMove: function(e) {
