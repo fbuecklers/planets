@@ -120,7 +120,7 @@ var MapStar = MapComponent.inherit({
 	
 	draw: function() {
 		if (this.map.radius > 500) {
-			var dot = (.25 + (this.bounds.z + 400) / 800) * this.map.zoom;
+			var dot = .25 + (this.bounds.z / this.map.width + .5) * this.map.zoom;
 			
 			this.context.fillStyle = 'white';
 			this.context.strokeStyle = 'white';
@@ -238,7 +238,7 @@ var MapRoute = MapComponent.inherit({
 	draw: function() {
 		this.context.save();
 		this.context.beginPath();
-		this.context.arc(0, 0, 400, 0, Math.PI * 2, false);
+		this.context.arc(0, 0, this.map.width/2, 0, Math.PI * 2, false);
 		this.context.clip();
 		
 		for (var i = 0; i < this.points.length - 1; ++i) {
@@ -315,7 +315,7 @@ var MapRoute = MapComponent.inherit({
 	},
 	
 	isLineVisible: function(start, target) {
-		var rad = 400;
+		var rad = this.map.width/2;
 		
 		if (start.abs() < rad && target.abs() < rad){
 			return true;
@@ -356,11 +356,13 @@ var MapCoordinate = MapComponent.inherit({
 	initialize: function() {
 		this.superCall();
 		
-		this.center = new Vector(310, -310, 0);
 		this.visible = true;
 	},
 	
 	update: function() {
+		var wDiff = this.map.width * 1/10;
+		
+		this.center = new Vector(this.map.width/2 - wDiff, -this.map.height/2 + wDiff, 0);
 		this.rotate();
 	},
 	
