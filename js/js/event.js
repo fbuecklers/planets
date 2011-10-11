@@ -224,8 +224,8 @@ var EventDispatcher = Object.inherit({
 	},
 	
 	updateMousePosition: function(e) {
-		var x = e.pageX - this.element.offsetLeft - 400;
-		var y = e.pageY - this.element.offsetTop - 400; 
+		var x = e.pageX - this.element.offsetLeft - this.element.width/2;
+		var y = e.pageY - this.element.offsetTop - this.element.height/2; 
 		this.mousePosition = new Vector(x, y);
 	},
 });

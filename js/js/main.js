@@ -82,10 +82,11 @@ window.onload = function() {
 	console.log('start');
 	
 	map.update();
-	map.draw();
+	map.onResize();
 };
 
 var Map = MapComponent.inherit({
+	
 	initialize: function(element) {
 		this.superCall();
 		
@@ -101,13 +102,15 @@ var Map = MapComponent.inherit({
 		
 		this.eventDispatcher = new EventDispatcher(this);
 		
-		this.context.translate(400, 400);
+		this.context.setTransform(1, 0, 0, 1, 400, 400);
 		this.matrix = new Matrix(
 			[400 / this.radius, 0, 0], 
 			[0, -400 / this.radius, 0], 
 			[0, 0, 400 / this.radius]
 		);
 		this.inverseMatrix = null;
+		
+		window.addEventListener('resize', this.onResize, false);
 	},
 	
 	getComponent: function(x,y){
@@ -118,6 +121,23 @@ var Map = MapComponent.inherit({
 		this.context.clear();
 		this.matrix = null;
 		this.inverseMatrix = null;
+	},
+	
+	onResize: function(e) {
+		var oldWidth = this.width;
+		
+		this.width = window.innerWidth > 800? 800: window.innerWidth;
+		this.height = window.innerHeight > 800? 800: window.innerHeight;
+		
+		this.element.width = this.width = window.innerWidth;
+		this.element.height = this.height = window.innerHeight;
+		
+		this.context.setTransform(1, 0, 0, 1, this.width/2, this.height/2);
+		this.matrix = this.matrix.scale(this.width / oldWidth);
+		this.inverseMatrix = null;
+		
+		this.update();
+		this.draw();
 	},
 	
 	wheel : function(e) {
@@ -233,7 +253,7 @@ var Map = MapComponent.inherit({
 	update: function() {
 		this.superCall();
 		
-		this.raster = new RasterMap();
+		this.raster = new RasterMap(this.width, this.height);
 		for (var i = 0, c; c = this.components[i]; ++i) {
 			if (c.visible) {
 				this.raster.putComponent(c);
@@ -270,8 +290,14 @@ function run() {
 
 
 var RasterMap = Object.inherit({
-	initialize: function() {
-		this.array = new Array(6400);
+	initialize: function(width, height) {
+		this.width = width;
+		this.height = height;
+		
+		this.cols = Math.ceil(width / 50);
+		this.rows = Math.ceil(height / 50);
+		
+		this.array = new Array(this.cols * this.rows);
 	},
 	
 	getComponent: function(x, y) {
@@ -324,8 +350,8 @@ var RasterMap = Object.inherit({
 		
 		var index = this.getIndex(x, y);
 		
-		var xOffset = x % 10 < 5? -1: 1;
-		var yOffset = y % 10 < 5? -80: 80;
+		var xOffset = x % 50 < 25? -1: 1;
+		var yOffset = y % 50 < 25? -this.cols: this.cols;
 		
 		this.indexPut(index, bucket);
 		this.indexPut(index + xOffset, bucket);
@@ -350,6 +376,6 @@ var RasterMap = Object.inherit({
 	},
 
 	getIndex: function(x, y) {
-		return Math.floor((x + 400) / 10) + 80 * Math.floor((y + 400) / 10);
+		return Math.floor((x + this.width/2) / 50) + this.cols * Math.floor((y + this.height/2) / 50);
 	}
 });
