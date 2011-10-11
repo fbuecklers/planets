@@ -73,6 +73,7 @@ var PowerStation = Building.inherit({
 	initialize: function(){
 		this.level = 1;
 		this.people = 0;
+		this.type = 
 	}
 });
 
