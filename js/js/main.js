@@ -126,8 +126,8 @@ var Map = MapComponent.inherit({
 	onResize: function(e) {
 		var oldWidth = this.width;
 		
-		this.width = window.innerWidth > 800? 800: window.innerWidth;
-		this.height = window.innerHeight > 800? 800: window.innerHeight;
+		this.width = window.innerWidth;
+		this.height = window.innerHeight;
 		
 		this.element.width = this.width = window.innerWidth;
 		this.element.height = this.height = window.innerHeight;
@@ -155,10 +155,10 @@ var Map = MapComponent.inherit({
 		this.inverseMatrix = null;
 		this.radius = this.size / this.zoom;
 		
-		if (e.target instanceof MapStar && this.center !== e.target.star.position) {
+		if (e.target instanceof MapStar && this.center != e.target.star.position) {
 			if (oldZoom < this.zoom) {
 				var cp = e.target.star.position.sub(this.center);
-				var step = cp.normalize(this.size / (this.zoom - oldZoom));
+				var step = cp.normalize(this.radius / 10);
 				
 				if (step.abs() > cp.abs()) {
 					this.center = e.target.star.position;
@@ -192,7 +192,7 @@ var Map = MapComponent.inherit({
 	rotate: false,
 	beginMove: function(e) {
 		this.last = e.mouse;
-		this.rotate = e.mouse.abs() > this.width * 3/4;
+		this.rotate = e.mouse.abs() > this.width * 3/8;
 	},
 	
 	move: function(e) {
