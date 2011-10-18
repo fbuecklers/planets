@@ -63,8 +63,13 @@ var SurfaceMap = Component.inherit({
 		this.element = element;
 		this.context = element.getContext('2d');
 		
+		this.context.translate(400, 400);
+		
+		this.offsetField = this.planetSurface.fields[0];
 		this.offsetY = 0;
 		this.offsetX = 0;
+		this.offsetW = 0;
+		this.offsetH = 0;
 		this.fieldSize = Math.sqrt(164);
 		this.eventDispatcher = new EventDispatcher(this);
 		
@@ -77,18 +82,17 @@ var SurfaceMap = Component.inherit({
 	},
 	
 	getComponent: function(x, y) {
-		y += 464 + this.offsetY;
-		x += this.offsetX;
+		y -= this.offsetY;
+		x -= this.offsetX;
 		var dh = (this.wAxis.y * x - this.wAxis.x * y);
 		dh /= (this.hAxis.x * this.wAxis.y - this.hAxis.y * this.wAxis.x);
 		
 		var dw = (x - dh * this.hAxis.x) / this.wAxis.x; 
 		
-		var w = Math.floor(dw);
-		var h = Math.floor(dh);
-		console.log(w, h);
-		//if (w < 0 || h < 0 || w > 47 || h > 47)
-			return null;
+		var w = (Math.floor(dw) + this.offsetField.w + this.planetSurface.width) % (this.planetSurface.width);
+		var h = (Math.floor(dh) + this.offsetField.h + this.planetSurface.height) % (this.planetSurface.height);
+//		if (w < 0 || h < 0 || w > 47 || h > 47)
+//			return null;
 		
 		return this.components[h * this.planetSurface.width + w];
 	},
@@ -101,7 +105,8 @@ var SurfaceMap = Component.inherit({
 	},
 	
 	click: function(e) {
-		console.log(e.target.field);
+		console.log(this.offsetX, this.offsetY);
+		console.log(e.target.field.w, e.target.field.h, e.target.field.index);
 	},
 	
 	beginMove: function(e) {
@@ -111,16 +116,14 @@ var SurfaceMap = Component.inherit({
 	
 	move: function(e) {
 		var diff = e.mouse.sub(this.last);
-		if (diff.x){
-			this.offsetX += diff.x;
-			this.offsetX = this.offsetX % (this.planetSurface.width * 20);
-		}
-		if (diff.y){
-			this.offsetY += diff.y;
-			this.offsetY = this.offsetY % (this.planetSurface.height * 16);
-		}
+		this.offsetField = this.getComponent(diff.x, diff.y).field;
+		var x = this.offsetField.h * -10 + this.offsetField.w * 10;
+		var y = this.offsetField.h * 8 + this.offsetField.w * 8;
+		console.log(x,y, diff.x, diff.y);
+		this.offsetX = diff.x - x;
+		this.offsetY = diff.y - y +464;
 		this.draw();
-		this.last = e.mouse
+		this.last = e.mouse;
 	},
 	
 	endMove: function(e) {
@@ -133,26 +136,19 @@ var SurfaceMap = Component.inherit({
 		this.context.beginPath();
 		this.context.strokeStyle = 'black';
 		this.context.lineWidth = 0.5;
-		for (var i = -4; i < 45; i++){
-			this.context.moveTo(360 - i * 10 + (this.offsetX % 20), i * 8 - 32 + (this.offsetY % 16));
-			this.context.lineTo(840 - i * 10 + (this.offsetX % 20), 352 + i * 8 + (this.offsetY % 16));
+		for (var i = 0; i < 49; i++){
+			this.context.moveTo(-i * 10 + this.offsetX, -384 + i * 8 + this.offsetY);
+			this.context.lineTo(480 - i * 10 + this.offsetX, i * 8 + this.offsetY);
 
-			this.context.moveTo(440 + i * 10 + (this.offsetX % 20), i * 8 - 32 + (this.offsetY % 16));
-			this.context.lineTo(i * 10 - 40 + (this.offsetX % 20), 352 + i * 8 + (this.offsetY % 16));
+			this.context.moveTo(i * 10 + this.offsetX, -384 + i * 8 + this.offsetY);
+			this.context.lineTo(-480 + i * 10 + this.offsetX, i * 8 + this.offsetY);
 		}
-		var h = 1;
-		var w = 1;
-		var x = 400 + (h * -10 + w * 10) + this.offsetX; 
-		var y = (h * 8 + w * 8) - 64 + this.offsetY;
+		
 		this.context.stroke();
-		this.context.fillStyle = 'red';
-		this.context.beginPath();
-		this.context.moveTo(x, y);
-		this.context.lineTo(x + 10, y + 8);
-		this.context.lineTo(x, y + 16);
-		this.context.lineTo(x - 10, y + 8);
-		this.context.closePath();
-		this.context.fill();
+		
+		this.drawField(new Field(2020,20,20));
+
+
 //		
 //		this.context.beginPath();
 //		this.context.strokeStyle = 'green';
@@ -169,17 +165,22 @@ var SurfaceMap = Component.inherit({
 	},
 	
 	drawField: function(field) {
-//		var x = 400 + (field.h * -10 + field.w * 10) - this.offsetX; 
-//		var y = (field.h * 8 + field.w * 8) - 64 - this.offsetY;
+//		var x = 400 + (((field.h * -10 + field.w * 10) + this.offsetX) % (this.planetSurface.width * 20)); 
+//		var y = (((field.h * 8 + field.w * 8) + this.offsetY) % (this.planetSurface.height * 16)) - 64;
+		var h = ((this.offsetField.h + field.h + 24) % this.planetSurface.height) - 24;
+		var w = ((this.offsetField.w + field.w + 24) % this.planetSurface.width) - 24;
 		
-//		this.context.fillStyle = 'red';
-//		this.context.beginPath();
-//		this.context.moveTo(x, y);
-//		this.context.lineTo(x + 10, y + 8);
-//		this.context.lineTo(x, y + 16);
-//		this.context.lineTo(x - 10, y + 8);
-//		this.context.closePath();
-//		this.context.fill();
+		var x = h * -10 + w * 10 + this.offsetX; 
+		var y = h * 8 + w * 8 + this.offsetY;
+		
+		this.context.fillStyle = 'red';
+		this.context.beginPath();
+		this.context.moveTo(x, y);
+		this.context.lineTo(x + 10, y + 8);
+		this.context.lineTo(x, y + 16);
+		this.context.lineTo(x - 10, y + 8);
+		this.context.closePath();
+		this.context.fill();
 	}
 });
 
