@@ -105,7 +105,8 @@ var SurfaceMap = Component.inherit({
 	},
 	
 	click: function(e) {
-		console.log(this.offsetX, this.offsetY);
+//		console.log(this.offsetX, this.offsetY);
+//		console.log(this.offsetField.w, this.offsetField.h);
 		console.log(e.target.field.w, e.target.field.h, e.target.field.index);
 	},
 	
@@ -113,15 +114,16 @@ var SurfaceMap = Component.inherit({
 		e.preventDefault();
 		this.last = e.mouse;
 	},
-	
+	this.wAxis = new Vector(10, 8);
+	this.hAxis = new Vector(-10, 8);
 	move: function(e) {
-		var diff = e.mouse.sub(this.last);
+		var diff = this.last.sub(e.mouse);
 		this.offsetField = this.getComponent(diff.x, diff.y).field;
 		var x = this.offsetField.h * -10 + this.offsetField.w * 10;
 		var y = this.offsetField.h * 8 + this.offsetField.w * 8;
-		console.log(x,y, diff.x, diff.y);
-		this.offsetX = diff.x - x;
-		this.offsetY = diff.y - y +464;
+		console.log(x,y, diff.x, diff.y, this.offsetField);
+		this.offsetX = (diff.x - x)%20;
+		this.offsetY = (diff.y - y)%16;
 		this.draw();
 		this.last = e.mouse;
 	},
