@@ -40,7 +40,7 @@ var Component = EventTarget.inherit({
 	}
 });
 
-var MapComponent = Component.inherit({
+var CanvasComponent = Component.inherit({
 	init: function(parentComponent) {
 		this.superCall(parentComponent);
 		
@@ -66,16 +66,46 @@ var MapComponent = Component.inherit({
 			c.update();
 	},
 	
-	draw: function() {},
-	rotate: function() {},
-	zoom: function() {},
+	draw: function() {
+		for (var i = 0, c; c = this.components[i]; ++i)
+			if (c.visible)
+				c.draw();
+	},
+	rotate: function() {
+		for (var i = 0, c; c = this.components[i]; ++i)
+			if (c.visible)
+				c.rotate();
+	},
+	zoom: function() {
+		for (var i = 0, c; c = this.components[i]; ++i)
+			c.zoom();
+	},
+	animate: function() {
+		for (var i = 0, c; c = this.components[i]; ++i)
+			if (c.visible)
+				c.animate();
+	}
 });
 
-var MapStar = MapComponent.inherit({
+var RectBound = Object.inherit({
+	initialize: function(left, top, back, width, height, depth) {
+		this.left = left;
+		this.top = top;
+		this.back = back;
+		this.width = width;
+		this.height = height;
+		this.depth = depth;
+	}
+});
+
+var MapStar = CanvasComponent.inherit({
 	initialize: function(star) {
 		this.superCall();
 		this.star = star;
 		this.active = false;
+		
+		for (var i = 0, p; p = star.planets[i]; ++i)
+			this.addComponent(new MapStarPlanet(p));
 		
 		this.addEventListener('over', this.over, false);
 		this.addEventListener('out', this.out, false);
@@ -113,19 +143,27 @@ var MapStar = MapComponent.inherit({
 	},
 	
 	rotate: function() {
-		if (this.visible) {
-			this.bounds = this.map.transform(this.star.position);
-		}
+		this.bounds = this.map.transform(this.star.position);
 	},
 	
 	draw: function() {
 		if (this.map.radius > 500) {
-			var dot = .25 + (this.bounds.z / this.map.width + .5) * this.map.zoom;
+			var dot = (this.bounds.z / this.map.width + .5) * this.map.zoomFactor;
 			
-			this.context.fillStyle = 'white';
 			this.context.strokeStyle = 'white';
 			this.context.font = '12px Verdana';
-			this.context.dot(this.bounds.x, this.bounds.y, dot);			
+			
+//			if (this.map.radius < 1500) {				
+//				var gradient = this.context.createRadialGradient(this.bounds.x, this.bounds.y, dot, this.bounds.x, this.bounds.y, 0)
+//				gradient.addColorStop(0, '#000000');
+//				gradient.addColorStop(.4, '#770000');
+//				gradient.addColorStop(.95, '#ffffff');
+//				this.context.fillStyle = gradient;
+//			} else {
+				this.context.fillStyle = '#ff7777';
+//			}
+			
+			this.context.dot(this.bounds.x, this.bounds.y, dot);		
 
 			if (this.active) {
 				this.context.beginPath();
@@ -136,55 +174,69 @@ var MapStar = MapComponent.inherit({
 		} else {
 			this.context.save();
 			this.context.translate(this.bounds.x, this.bounds.y);
-
-			var planets = this.star.planets;
-			for (var i = planets.length - 1, p; p = planets[i]; --i) {
-				this.drawPlanet(p, false);
+			
+			for (var i = this.components.length - 1, p; p = this.components[i]; --i) {
+				p.draw(false);
 			}
 			
-			var size = .5 * this.map.zoom;
+			var size = .5 * this.map.zoomFactor;
 			this.context.drawImage(this.star.image, - size / 2, - size / 2, size, size);
 			
-			for (var i = 0, p; p = planets[i]; ++i) {
-				this.drawPlanet(p, true);
+			for (var i = 0, p; p = this.components[i]; ++i) {
+				p.draw(true);
 			}
 			
 			this.context.restore();
 		}
+	}
+});
+
+var MapStarPlanet = CanvasComponent.inherit({
+	initialize: function(planet) {
+		this.superCall();
+		
+		this.visible = true;
+		
+		this.planet = planet;
+		this.position = this.planet.position;
 	},
 	
-	drawPlanet: function(planet, positive) {
-		var n = this.map.matrix.dot(planet.normal).normalize();
-		var pos = this.map.matrix.dot(planet.position).normalize(planet.radius * this.map.zoom);
-
+	animate: function() {
+		this.position = this.position.rotateN(this.planet.normal, 1/this.planet.days * 2 * Math.PI);
+	},
+	
+	draw: function(positive) {
+		var n = this.map.matrix.dot(this.planet.normal).normalize();
+		var pos = this.map.matrix.dot(this.position).normalize(this.planet.radius * this.map.zoomFactor);
+	
 		var rotate = Math.atan2(n.x, n.y);
 		var scale = Math.acos(n.z);
 		
 		this.context.save();
 		this.context.rotate(-rotate);
 		this.context.scale(1, -Math.cos(scale));
-
+	
 		this.context.beginPath();
-		this.context.lineWidth = .02 * this.map.zoom;
+		this.context.lineWidth = .02 * this.map.zoomFactor;
 		this.context.strokeStyle = 'white';
 		
 		if (positive)
-			this.context.arc(0, 0, planet.radius * this.map.zoom, 0, Math.PI, false);
+			this.context.arc(0, 0, this.planet.radius * this.map.zoomFactor, 0, Math.PI, false);
 		else
-			this.context.arc(0, 0, planet.radius * this.map.zoom, Math.PI, Math.PI * 2, false);
+			this.context.arc(0, 0, this.planet.radius * this.map.zoomFactor, Math.PI, Math.PI * 2, false);
 		
 		this.context.resetTransform();
 		this.context.stroke();
 		this.context.restore();
 		
 		if (pos.z > 0 && !positive || pos.z <= 0 && positive) {
-			var size = .2 * this.map.zoom;
-			this.context.drawImage(planet.image, pos.x - size / 2, pos.y - size / 2, size, size);
+			var size = .2 * this.map.zoomFactor;
+			this.context.drawImage(this.planet.image, pos.x - size / 2, pos.y - size / 2, size, size);
 		}
 	}
 });
 
-var MapRoute = MapComponent.inherit({
+var MapRoute = CanvasComponent.inherit({
 	
 	initialize: function(route) {
 		this.superCall();
@@ -343,7 +395,7 @@ var MapRoute = MapComponent.inherit({
 	}
 });
 
-var MapRoutePoint = MapComponent.inherit({
+var MapRoutePoint = CanvasComponent.inherit({
 	initialize: function(index, point) {
 		this.superCall();
 		
@@ -352,7 +404,7 @@ var MapRoutePoint = MapComponent.inherit({
 	}
 });
 
-var MapCoordinate = MapComponent.inherit({
+var MapCoordinate = CanvasComponent.inherit({
 	initialize: function() {
 		this.superCall();
 		

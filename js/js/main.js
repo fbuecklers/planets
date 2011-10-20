@@ -34,7 +34,6 @@ function createMap(map) {
 			var name = 'P4X' + pad(position.x) + pad(position.y) + pad(position.z);
 			var normal = new Vector(Math.random() * 10, Math.random() * 10, Math.random() * 10);
 			var star = new Star(position, normal, name);
-			map.addComponent(new MapStar(star));
 			
 			var planetsCount = 2 + Math.ceil(Math.random() * 10);
 			for (var j = 0; j < planetsCount; ++j) {
@@ -46,6 +45,7 @@ function createMap(map) {
 				star.planets.push(planet);
 			}
 			
+			map.addComponent(new MapStar(star));
 		}		
 	}
 	
@@ -85,7 +85,7 @@ window.onload = function() {
 	map.onResize();
 };
 
-var Map = MapComponent.inherit({
+var Map = CanvasComponent.inherit({
 	
 	initialize: function(element) {
 		this.superCall();
@@ -97,7 +97,7 @@ var Map = MapComponent.inherit({
 		this.context = element.getContext('2d');
 		this.radius = this.size;
 		this.center = Vector.ZERO;
-		this.zoom = 1;
+		this.zoomFactor = 1;
 		this.raster = null;
 		
 		this.eventDispatcher = new EventDispatcher(this);
@@ -142,21 +142,21 @@ var Map = MapComponent.inherit({
 	
 	wheel : function(e) {
 		var delta = e.mouseDelta;
-		var oldZoom = this.zoom;
+		var oldZoom = this.zoomFactor;
 		
-		this.zoom += this.zoom * delta / 20;
-		if (this.zoom < .5)
-			this.zoom = .5;
+		this.zoomFactor += this.zoomFactor * delta / 20;
+		if (this.zoomFactor < .5)
+			this.zoomFactor = .5;
 		
-		if (this.zoom > 3000)
-			this.zoom = 3000;
+		if (this.zoomFactor > 3000)
+			this.zoomFactor = 3000;
 		
-		this.matrix = this.matrix.scale(this.zoom / oldZoom);
+		this.matrix = this.matrix.scale(this.zoomFactor / oldZoom);
 		this.inverseMatrix = null;
-		this.radius = this.size / this.zoom;
+		this.radius = this.size / this.zoomFactor;
 		
 		if (e.target instanceof MapStar && this.center != e.target.star.position) {
-			if (oldZoom < this.zoom) {
+			if (oldZoom < this.zoomFactor) {
 				var cp = e.target.star.position.sub(this.center);
 				var step = cp.normalize(this.radius / 10);
 				
@@ -168,14 +168,13 @@ var Map = MapComponent.inherit({
 			} 
 		}
 		
-		if (this.zoom < 1) {
+		if (this.zoomFactor < 1) {
 			this.center = Vector.ZERO;
 		} else if (this.center.abs() + this.radius > this.size) {
-			this.center = this.center.normalize((1 - 1/this.zoom) * this.size);
+			this.center = this.center.normalize((1 - 1/this.zoomFactor) * this.size);
 		}
 		
-		for (var i = 0, c; c = this.components[i]; ++i)
-			c.zoom();
+		this.zoom();
 		
 		this.draw();
 	},
@@ -189,14 +188,14 @@ var Map = MapComponent.inherit({
 	},
 	
 	last: null,
-	rotate: false,
+	rotateZ: false,
 	beginMove: function(e) {
 		this.last = e.mouse;
-		this.rotate = e.mouse.abs() > this.width * 3/8;
+		this.rotateZ = e.mouse.abs() > this.width * 3/8;
 	},
 	
 	move: function(e) {
-		if (this.rotate) {
+		if (this.rotateZ) {
 			var x = new Vector(1, 0);
 			var currentAngle = e.mouse.angle(x);
 			if (e.mouse.y < 0)
@@ -220,8 +219,7 @@ var Map = MapComponent.inherit({
 		}
 		this.inverseMatrix = null;
 		
-		for (var i = 0, c; c = this.components[i]; ++i)
-			c.rotate();
+		this.rotate();
 		
 		this.draw();
 		this.last = e.mouse;
@@ -250,6 +248,27 @@ var Map = MapComponent.inherit({
 		return this.inverseMatrix.dot(v).add(this.center);
 	},
 	
+	time: null,
+	zoom: function() {
+		this.superCall();
+		
+		if (this.radius > 500) {
+			if (this.animationTimer) {				
+				window.clearInterval(this.animationTimer);
+				this.animationTimer = undefined;
+			}
+		} else {
+			if (!this.animationTimer) {				
+				this.animationTimer = window.setInterval(this.onAnimationTimer, 100);
+			}
+		}
+	},
+	
+	onAnimationTimer: function() {
+		this.animate();
+		this.draw();
+	},
+	
 	update: function() {
 		this.superCall();
 		
@@ -264,11 +283,7 @@ var Map = MapComponent.inherit({
 	draw: function() {
 		this.context.clear();
 		
-		for (var i = 0, c; c = this.components[i]; ++i) {
-			if (c.visible) {
-				c.draw();
-			}
-		}
+		this.superCall();
 	}
 });
 
@@ -277,7 +292,7 @@ var Map = MapComponent.inherit({
 
 var counter = 0;
 function run() {
-	drawMap(Math.PI / 180, Math.PI / 90, this.center, this.zoom);
+	drawMap(Math.PI / 180, Math.PI / 90, this.center, this.zoomFactor);
 	
 	counter++;
 	
