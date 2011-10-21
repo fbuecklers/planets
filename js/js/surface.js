@@ -82,8 +82,8 @@ var SurfaceMap = Component.inherit({
 	getComponent: function(x, y) {
 		var v = this.getSurfaceVector(new Vector(x, y)).sub(this.offset);
 		
-		var w = Math.floor(v.x + this.planetSurface.width) % this.planetSurface.width;
-		var h = Math.floor(v.y + this.planetSurface.height) % this.planetSurface.height;
+		var w = Math.floor(v.x + 2*this.planetSurface.width) % this.planetSurface.width;
+		var h = Math.floor(v.y + 2*this.planetSurface.height) % this.planetSurface.height;
 		
 		return this.components[h * this.planetSurface.width + w];
 	},

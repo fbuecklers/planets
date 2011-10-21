@@ -58,6 +58,8 @@ var Acadamy = Building.inherit({
 		this.currentworkers = 0;
 		this.energy = 20;
 		this.job = null;
+		this.teams = [];
+		this.bonus = 1;
 	}
 });
 
