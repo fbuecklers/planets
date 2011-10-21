@@ -105,17 +105,18 @@ var SurfaceMap = Component.inherit({
 	},
 	
 	onResize: function(e) {
-		this.resize(window.innerWidth, window.innerHeight);
+		this.resize(window.innerWidth - 8, window.innerHeight - 8);
 	},
 	
 	resize: function(width, height) {
 		this.element.width = width; 
 		this.element.height = height;
 		
-		var wLines = Math.floor(width / (this.wAxis.x * 2)) + 2;
-		var hLines = Math.floor(height / (this.wAxis.y * 2)) + 2;
+		var wLines = Math.floor(width / (this.wAxis.x * 2));
+		var hLines = Math.floor(height / (this.wAxis.y * 2));
 		
 		this.lines = wLines > hLines? wLines: hLines;
+		this.lines += 2 + this.lines % 2;
 		
 		this.context.setTransform(1, 0, 0, 1, width/2, height/2);
 		
