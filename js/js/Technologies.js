@@ -1,7 +1,11 @@
 var Technologie = Object.inherit({
 	initialize: function(type){
-		this.level = 1;
+		this.level = 0;
 		this.position = null;
-		this.people = 0;
+		this.researchPoints = 0;
 	}
 });
+
+var Laser = Technologie.inherit({
+	initilize: function()
+})
