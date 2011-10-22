@@ -190,7 +190,6 @@ var SurfaceMap = Component.inherit({
 		
 		this.drawField(new Field(2020,20,20));
 
-
 //		
 //		this.context.beginPath();
 //		this.context.strokeStyle = 'green';
@@ -204,6 +203,11 @@ var SurfaceMap = Component.inherit({
 //		var field = this.planetSurface.fields[0];
 //			this.drawField(field);
 //		}
+	},
+	drawBuilding: function(size, position){
+		this.context.clear();
+		this.context.moveTo()
+		
 	},
 	
 	drawField: function(field) {
