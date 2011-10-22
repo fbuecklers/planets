@@ -1,46 +1,6 @@
-var Component = EventTarget.inherit({
-	
-	initialize: function() {
-		this.superCall();
-		this.components = [];
-	},
-	
-	init: function(parentComponent) {
-		this.parentComponent = parentComponent;
-	},
-	
-	addComponent: function(component) {
-		this.components.push(component);
-		component.init(this);
-	},
-	
-	removeComponent: function(component) {
-		var index = this.components.indexOf(component);
-		if (index != -1) {			
-			this.components.splice(index, 1);
-		}
-	},
-	
-	dispatchEventListeners: function(evt, useCapture) {
-		if (useCapture) {
-			if (this.parentComponent && this.parentComponent.dispatchEventListeners(evt, useCapture)) {
-				return true;
-			} else {
-				return this.superCall(evt, useCapture);								
-			}
-		} else {
-			if (this.superCall(evt, useCapture)) {
-				return true;
-			} else if (evt.bubbles && this.parentComponent) {
-				return this.parentComponent.dispatchEventListeners(evt, useCapture);
-			} else {
-				return false;
-			}
-		}
-	}
-});
 
-var CanvasComponent = Component.inherit({
+
+var CanvasComponent = ElementComponent.inherit({
 	init: function(parentComponent) {
 		this.superCall(parentComponent);
 		

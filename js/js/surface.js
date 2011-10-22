@@ -16,15 +16,6 @@ var Field = Object.inherit({
 	}
 });
 
-var Building = Object.inherit({
-	initialize: function(type){
-		this.type = type;
-		this.level = 1;
-		this.position = null;
-		this.people = 0;
-	}
-});
-
 
 var PlanetSurface = Object.inherit({
 	initialize: function(width, height){
@@ -55,17 +46,14 @@ var SurfaceMapField = Component.inherit({
 	}
 });
 
-var SurfaceMap = Component.inherit({
-	initialize: function(planetSurface, element){
-		this.superCall();
+var SurfaceMap = ElementComponent.inherit({
+	initialize: function(planetSurface){
+		this.superCall(document.getElementById('surface'));
 		
 		this.planetSurface = planetSurface;
-		this.element = element;
-		this.context = element.getContext('2d');
+		this.context = this.element.getContext('2d');
 		
 		this.offset = new Vector(0, 0);
-		
-		this.eventDispatcher = new EventDispatcher(this);
 		
 		this.wAxis = new Vector(10, 8);
 		this.hAxis = new Vector(-10, 8);
@@ -74,13 +62,14 @@ var SurfaceMap = Component.inherit({
 			this.addComponent(new SurfaceMapField(field));
 		}
 		
-		window.addEventListener('resize', this.onResize, false);
-		
-		this.onResize();
+		this.addListener('over', this.onOver, false);
+		this.addListener('click', this.onClick, false);
+		this.addListener('move', this.onMove, false);
 	},
 	
-	getComponent: function(x, y) {
-		var v = this.getSurfaceVector(new Vector(x, y)).sub(this.offset);
+	getComponent: function(mouse) {
+		var center = new Vector(this.element.width/2, this.element.height/2);
+		var v = this.getSurfaceVector(mouse.sub(center)).sub(this.offset);
 		
 		var w = Math.floor(v.x + this.planetSurface.width) % this.planetSurface.width;
 		var h = Math.floor(v.y + this.planetSurface.height) % this.planetSurface.height;
@@ -102,10 +91,6 @@ var SurfaceMap = Component.inherit({
 		var y = v.x * this.wAxis.y + v.y * this.hAxis.y;
 		
 		return new Vector(x, y);
-	},
-	
-	onResize: function(e) {
-		this.resize(window.innerWidth - 8, window.innerHeight - 8);
 	},
 	
 	resize: function(width, height) {
@@ -133,38 +118,22 @@ var SurfaceMap = Component.inherit({
 		this.draw();
 	},
 	
-	over: function(e) {
+	onOver: function(e) {
 		if (e.target != this) {			
 			this.draw();
 			this.drawField(e.target.field);
 		}
 	},
 	
-	click: function(e) {
-//		console.log(this.offsetX, this.offsetY);
-//		console.log(this.offsetField.w, this.offsetField.h);
+	onClick: function(e) {
 		console.log(e.target.field.w, e.target.field.h, e.target.field.index);
 	},
 	
-	beginMove: function(e) {
-		e.preventDefault();
-		this.last = e.mouse;
-	},
-	
-	move: function(e) {
-		var diff = e.mouse.sub(this.last);
-		
-		this.offset = this.offset.add(this.getSurfaceVector(diff));
+	onMove: function(e) {
+		this.offset = this.offset.add(this.getSurfaceVector(e.mouseDelta));
 		this.offset = new Vector(this.offset.x % this.planetSurface.width, this.offset.y % this.planetSurface.height);
 		
-//		console.log(x,y, this.offset, this.offsetField);
 		this.draw();
-		
-		this.last = e.mouse;
-	},
-	
-	endMove: function(e) {
-		e.preventDefault();
 	},
 	
 	draw: function(){
@@ -189,27 +158,9 @@ var SurfaceMap = Component.inherit({
 		this.context.stroke();
 		
 		this.drawField(new Field(2020,20,20));
-
-
-//		
-//		this.context.beginPath();
-//		this.context.strokeStyle = 'green';
-//		this.context.lineWidth = 2;
-//		this.context.moveTo(400, 400);
-//		var w = this.hAxis.scalar(400);
-//		this.context.lineTo(400 + w.x, 400 + w.y);
-//		this.context.stroke();
-		
-//		for (var i=0,field; field = this.planetSurface.fields[i]; i+=10){
-//		var field = this.planetSurface.fields[0];
-//			this.drawField(field);
-//		}
 	},
 	
 	drawField: function(field) {
-//		var x = 400 + (((field.h * -10 + field.w * 10) + this.offsetX) % (this.planetSurface.width * 20)); 
-//		var y = (((field.h * 8 + field.w * 8) + this.offsetY) % (this.planetSurface.height * 16)) - 64;
-		
 		var width = this.planetSurface.height;
 		var height = this.planetSurface.height;
 		
@@ -229,6 +180,165 @@ var SurfaceMap = Component.inherit({
 	}
 });
 
+var Slider = ElementComponent.inherit({
+	initialize: function(element) {
+		this.superCall(element);
+		
+		this.template = element.removeChild(element.querySelector('div'));
+		this.scrollOffset = 0;
+
+		this.bar = new SliderBar(this);
+		ElementComponent.prototype.addComponent.call(this, this.bar);
+		element.appendChild(this.bar.element);
+		
+		this.content = document.createElement('div');
+		this.content.className = 'content';
+		element.appendChild(this.content);
+		
+		this.addListener('wheel', this.onWheel, false);
+		this.addListener('move', this.onMove, false);
+	},
+	
+	addComponent: function(component) {
+		if (!component.element) {
+			var childNode = this.template.cloneNode(true);
+			component.element = childNode;
+			childNode.component = component;
+		}
+		
+		this.content.appendChild(component.element);
+		this.superCall(component);
+	},
+	
+	removeComponent: function(component) {
+		this.superCall(component);		
+		this.content.removeChild(component.element);
+	},
+	
+	resize: function(width, height) {
+		this.element.style.width = width + 'px';
+		this.element.style.height = height + 'px';
+
+		this.heightFactor = (this.element.clientHeight - 4) / this.content.clientHeight;
+		
+		this.scroll(0);
+	},
+	
+	scroll: function(delta) {
+		this.scrollOffset += delta;
+		
+		var dist = this.content.clientHeight - this.element.clientHeight;
+		
+		if (this.scrollOffset > dist)
+			this.scrollOffset = dist;
+		
+		if (this.scrollOffset < 0)
+			this.scrollOffset = 0;
+		
+		this.content.style.top = (-this.scrollOffset) + 'px';
+		
+		if (this.heightFactor < 1) {
+			this.bar.element.style.opacity = 1;
+			this.bar.element.style.display = 'block';
+			this.bar.element.style.height = (this.heightFactor * (this.element.clientHeight - 4)) + 'px';
+			this.bar.element.style.top = (2 + this.scrollOffset * this.heightFactor) + 'px';
+		} else {
+			this.bar.element.style.display = 'none';
+		}
+		
+		window.clearInterval(this.timer);
+		this.opacity = 2;
+		this.timer = window.setInterval(this.onTimer, 100);
+	},
+	
+	onTimer: function() {
+		this.bar.element.style.opacity = (this.opacity -= .2);
+		if (this.opacity <= 0) {
+			window.clearInterval(this.timer);
+			opacity = 1;
+		}
+	},
+	
+	onWheel: function(e) {
+		this.scroll(-e.mouseDelta * 10);
+	},
+	
+	onMove: function(e) {
+		this.scroll(e.mouseDelta.y);
+	}
+});
+
+var SliderBar = ElementComponent.inherit({
+	initialize: function(slider) {
+		this.superCall(document.createElement('div'));
+		this.element.className = 'bar';
+		
+		this.slider = slider;
+		
+		this.addListener('move', this.onMove, false);
+	},
+	
+	onMove: function(e) {
+		this.slider.scroll(e.mouseDelta.y / this.slider.heightFactor);
+	}
+});
+
+var BuildingType = ElementComponent.inherit({
+	initialize: function(cls) {
+		this.superCall();
+		
+		this.cls = cls;
+		
+		this.addListener('active', this.onActive, false);
+		this.addListener('inactive', this.onInactive, false);
+	},
+	
+	init: function(component) {
+		this.superCall(component);
+
+		var context = this.element.querySelector('canvas').getContext('2d');
+		size = this.cls.prototype.size;
+	},
+	
+	onActive: function(e) {
+		this.element.className = 'building active';
+	},
+	
+	onInactive: function(e) {
+		this.element.className = 'building';
+	}
+});
+
+var Surface = DocumentComponent.inherit({
+	
+	initialize: function() {
+		this.superCall();
+		
+		this.map = new SurfaceMap(new PlanetSurface(100, 100));
+		this.buildings = new Slider(document.getElementById('buildings'));
+		
+		this.addComponent(this.map);
+		this.addComponent(this.buildings);
+		
+		for (var className in buildings) {
+			this.buildings.addComponent(new BuildingType(buildings[className]));
+		}
+
+		window.addEventListener('resize', this.onResize, false);
+		
+		this.onResize();
+	},
+	
+	onResize: function(e) {
+		var width = window.innerWidth;
+		var height = window.innerHeight;
+		
+		this.map.resize(width - 208, height - 8);
+		this.buildings.resize(200, height);
+	}
+	
+});
+
 window.onload = function() {
-	var test = new SurfaceMap(new PlanetSurface(100, 100), document.getElementById('planets'));
+	surface = new Surface();
 };

@@ -1,0 +1,62 @@
+body {
+	background-color: #070546;
+	overflow: hidden;
+	margin: 0;
+}
+
+#surface {
+	float: left;
+	margin: 4px;
+}
+
+#buildings {
+	overflow: hidden;
+}
+
+.buidling {
+	
+}
+
+.slider {
+	overflow: hidden;
+	position: relative;
+}
+
+.slider > .content {
+	position: absolute;
+	top: 0;
+	left: 0;
+	
+}
+
+.slider > .bar {
+	width: 5px;
+	height: 5px;
+	background-color: #BAAC11;
+	position: absolute;
+	right: 3px;
+	bottom: 3px;
+	z-index: 1;
+}
+
+.slider > .content > * {
+	float: left;
+}
+
+.building {
+	margin: 2px;
+	width: 90px;
+	height: 90px;
+	background-color: #1F1D82;
+}
+
+.building.active {
+	background-color: #BA7311;
+}
+
+.building canvas {
+	display: block;
+	width: 90px;
+	height: 90px;
+}
+

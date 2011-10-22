@@ -9,11 +9,18 @@
 <script type="text/javascript" src="js/event.js"></script>
 <script type="text/javascript" src="js/Planet.js"></script>
 <script type="text/javascript" src="js/Route.js"></script>
+<script type="text/javascript" src="js/Component.js"></script>
 <script type="text/javascript" src="js/MapComponent.js"></script>
+<script type="text/javascript" src="js/Building.js"></script>
 <script type="text/javascript" src="js/surface.js"></script>
+<link rel="stylesheet" href="css/surface.css" />
 </head>
-<body style="background-color: white; overflow: hidden; margin: 4px">
-<canvas id="planets" width="800" height="800"></canvas>
-<div id="box" style="display: absolute; background-color: white"></div>
+<body>
+<canvas id="surface" width="800" height="800"></canvas>
+<div id="buildings" class="slider">
+	<div class="building">
+		<canvas></canvas>
+	</div>
+</div>
 </body>
 </html>
