@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.0" xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
+	<persistence-unit name="server" transaction-type="RESOURCE_LOCAL">
+		<class>models.Test</class>
+		<properties>
+			<property name="eclipselink.ddl-generation.output-mode" value="both"/>
+			<property name="eclipselink.exclude-eclipselink-orm" value="true"/>
+			<property name="eclipselink.jdbc.batch-writing" value="JDBC"/>
+			<property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/>
+			<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/planets"/>
+			<property name="javax.persistence.jdbc.user" value="planets"/>
+			<property name="javax.persistence.jdbc.password" value="planets"/>
+		</properties>
+	</persistence-unit>
+</persistence>
