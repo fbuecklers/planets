@@ -1,0 +1,5 @@
+package vector
+
+class Vector {
+
+}

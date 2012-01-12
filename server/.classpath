@@ -9,6 +9,6 @@
 			<attribute name="owner.project.facets" value="jpt.jpa"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Program Files/eclipse/configuration/org.eclipse.osgi/bundles/815/1/.cp/lib/scala-library.jar"/>
+	<classpathentry kind="lib" path="D:/eclipse/configuration/org.eclipse.osgi/bundles/683/1/.cp/lib/scala-library.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
