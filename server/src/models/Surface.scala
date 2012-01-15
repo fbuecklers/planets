@@ -2,7 +2,6 @@ package models
 import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.Id
-import models.building.Building
 
 @Entity
 class Surface {
@@ -12,7 +11,9 @@ class Surface {
   var id:Integer = _
 
   var planet:Planet = _
-  
+  var height:Int = _
+  var length:Int = _
+  var jobless:Int = _
   
   //Lager
   var maxstorage:Double = _
@@ -21,15 +22,21 @@ class Surface {
   var kohlenstoff:Int = _
   var arsen:Int = _
   var gallium:Int = _
-  var actinoide:Int
+  var actinoide:Int = _
   
   var food:Int = _
   var luxus:List[Luxusg] = _
   
-  
- def getStorage() {
+  def shuffleworkers() {
     
+
+    
+    var i = 0
+    var d = 0
+    var freejobs = 10
+    while (i <= 15 && d <= 5 && freejobs > 0){
+      i += 1
+    }
   }
   
- def 
 }

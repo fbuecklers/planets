@@ -12,5 +12,5 @@ class Tile {
 
   var surface:Surface = _
   var building:Building = _
-
+  var number:Int = _
 }
