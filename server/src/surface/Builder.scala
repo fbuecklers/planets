@@ -1,10 +1,11 @@
 package surface
-import models.Player
+import javax.persistence.Entity
 import javax.persistence.EntityManager
+import kernel.Worker
+import models.building.Building
+import models.Player
 import models.Surface
 import models.Tile
-import models.building.Building
-import kernel.Worker
 
 class Builder extends Worker {
   
@@ -26,7 +27,7 @@ class Builder extends Worker {
       case "Warehouse"   => {import models.building.Warehouse;   building = new Warehouse}
       case "Factory"     => {import models.building.Factory;     building = new Factory}
     }  
-  building.position = position
+   building.position = position
   
   }
 }
