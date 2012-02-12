@@ -10,8 +10,27 @@ var Component = EventTarget.inherit({
 	},
 	
 	addComponent: function(component) {
-		this.components.push(component);
-		component.init(this);
+		if (component.parentComponent != this) {
+			if (component.parentComponent) {
+				component.parentComponent.removeComponent(component);
+			}
+				
+			this.components.push(component);
+			component.init(this);
+		}
+	},
+	
+	setComponent: function(index, component) {
+		var parentChanged = component.parentComponent != this;
+		if (component.parentComponent) {
+			component.parentComponent.removeComponent(component);
+			component.parentComponent = this;
+		}
+				
+		this.components.splice(index, 0, component);
+		
+		if (parentChanged)
+			component.init(this);
 	},
 	
 	removeComponent: function(component) {
@@ -19,6 +38,8 @@ var Component = EventTarget.inherit({
 		if (index != -1) {			
 			this.components.splice(index, 1);
 		}
+		
+		component.parentComponent = null;
 	},
 	
 	callListeners: function(evt, useCapture) {
@@ -50,7 +71,7 @@ var ElementComponent = Component.inherit({
 		}
 	},
 	
-	getComponent: function(x, y) {
+	getComponent: function(mouse) {
 		return this;
 	}
 });
@@ -70,6 +91,8 @@ var DocumentComponent = ElementComponent.inherit({
 		this.element.addEventListener('click', this.onClick, false);
 		this.element.addEventListener('mousewheel', this.onWheel, false);
 		this.element.addEventListener('DOMMouseScroll', this.onWheel, false);
+		
+		window.addEventListener('resize', this.onWindowResize, false);
 	},
 	
 	onClick: function(e) {
@@ -79,12 +102,12 @@ var DocumentComponent = ElementComponent.inherit({
 			var lastActiveComponent = this.activeComponent;
 			this.activeComponent = this.currentComponent;
 			
-			var evt = new MapEvent('inactive', this.mousePosition);
+			var evt = new InteractionEvent('inactive', this.mousePosition);
 			if (lastActiveComponent.dispatchEvent(evt)) {
 				e.preventDefault();
 			}
 			
-			evt = new MapEvent('active', this.mousePosition);
+			evt = new InteractionEvent('active', this.mousePosition);
 			if (this.currentComponent.dispatchEvent(evt)) {
 				e.preventDefault();
 			}
@@ -102,7 +125,7 @@ var DocumentComponent = ElementComponent.inherit({
 		window.clearTimeout(this.timer);
 		this.timer = window.setTimeout(this.onWheelTimer, 200);
 		
-		var evt = new MapEvent('wheel', this.mousePosition, delta);
+		var evt = new InteractionEvent('wheel', this.mousePosition, delta);
 		if (this.currentComponent.dispatchEvent(evt)) {
 			e.preventDefault();
 		}
@@ -111,7 +134,7 @@ var DocumentComponent = ElementComponent.inherit({
 	onWheelTimer: function() {
 		this.handleOver = true;
 
-		var evt = new MapEvent('endWheel', this.mousePosition);
+		var evt = new InteractionEvent('endWheel', this.mousePosition);
 		this.currentComponent.dispatchEvent(evt);
 	},
 	
@@ -123,10 +146,10 @@ var DocumentComponent = ElementComponent.inherit({
 			this.updateCurrentComponent(e);
 			
 			if (this.currentComponent != lastComponent) {				
-				var evt = new MapEvent('out', this.mousePosition);
+				var evt = new InteractionEvent('out', this.mousePosition);
 				lastComponent.dispatchEvent(evt);
 				
-				evt = new MapEvent('over', this.mousePosition);
+				evt = new InteractionEvent('over', this.mousePosition);
 				this.currentComponent.dispatchEvent(evt);
 			}
 		}
@@ -140,7 +163,7 @@ var DocumentComponent = ElementComponent.inherit({
 		this.element.addEventListener('mouseup', this.onEndMove, false);
 		this.element.removeEventListener('mousemove', this.onMouseMove, false);
 		
-		var evt = new MapEvent('beginMove', this.mousePosition);
+		var evt = new InteractionEvent('beginMove', this.mousePosition);
 		this.currentComponent.dispatchEvent(evt);
 
 		e.preventDefault();
@@ -153,7 +176,7 @@ var DocumentComponent = ElementComponent.inherit({
 		if (this.beginMousePosition.sub(this.mousePosition).abs() > 5)
 			this.element.removeEventListener('click', this.onClick, false);
 		
-		var evt = new MapEvent('move', this.mousePosition, this.mousePosition.sub(lastMousePosition));
+		var evt = new InteractionEvent('move', this.mousePosition, this.mousePosition.sub(lastMousePosition), lastMousePosition);
 		if (this.currentComponent.dispatchEvent(evt)) {
 			e.preventDefault();
 		}
@@ -166,7 +189,7 @@ var DocumentComponent = ElementComponent.inherit({
 		this.element.removeEventListener('mouseup', this.onEndMove, false);
 		this.element.addEventListener('mousemove', this.onMouseMove, false);
 		
-		var evt = new MapEvent('endMove', this.mousePosition);
+		var evt = new InteractionEvent('endMove', this.mousePosition);
 		if (this.currentComponent.dispatchEvent(evt)) {
 			e.preventDefault();
 		}
@@ -198,13 +221,26 @@ var DocumentComponent = ElementComponent.inherit({
 		this.currentComponent = component.getComponent(this.mousePosition.sub(offset));
 		if (!this.currentComponent)
 			this.currentComponent = component;
+	},
+	
+	onWindowResize: function() {
+		this.dispatchEvent(new ResizeEvent(window.innerWidth, window.innerHeight));
 	}
 });
 
-var MapEvent = Event.inherit({
-	initialize: function(type, mouse, mouseDelta) {
+var InteractionEvent = Event.inherit({
+	initialize: function(type, mouse, mouseDelta, mousePrevious) {
 		this.initEvent(type, true, true);
 		this.mouse = mouse? mouse: null;
 		this.mouseDelta = mouseDelta? mouseDelta: 0;
+		this.mousePrevious = mousePrevious;
+	}
+});
+
+var ResizeEvent = Event.inherit({
+	initialize: function(width, height) {
+		this.initEvent('resize', true, true);
+		this.width = width;
+		this.height = height;
 	}
 });

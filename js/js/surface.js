@@ -62,9 +62,9 @@ var SurfaceMap = ElementComponent.inherit({
 			this.addComponent(new SurfaceMapField(field));
 		}
 		
-		this.addListener('over', this.onOver, false);
-		this.addListener('click', this.onClick, false);
-		this.addListener('move', this.onMove, false);
+		this.addListener('over', this.onOver);
+		this.addListener('click', this.onClick);
+		this.addListener('move', this.onMove);
 	},
 	
 	getComponent: function(mouse) {
@@ -195,8 +195,10 @@ var Slider = ElementComponent.inherit({
 		this.content.className = 'content';
 		element.appendChild(this.content);
 		
-		this.addListener('wheel', this.onWheel, false);
-		this.addListener('move', this.onMove, false);
+		this.hideBar = Interval.create(100, this.onHideBar);
+		
+		this.addListener('wheel', this.onWheel);
+		this.addListener('move', this.onMove);
 	},
 	
 	addComponent: function(component) {
@@ -246,17 +248,11 @@ var Slider = ElementComponent.inherit({
 			this.bar.element.style.display = 'none';
 		}
 		
-		window.clearInterval(this.timer);
-		this.opacity = 2;
-		this.timer = window.setInterval(this.onTimer, 100);
+		this.hideBar.start(20);
 	},
 	
-	onTimer: function() {
-		this.bar.element.style.opacity = (this.opacity -= .2);
-		if (this.opacity <= 0) {
-			window.clearInterval(this.timer);
-			opacity = 1;
-		}
+	onHideBar: function(e) {
+		this.bar.element.style.opacity = 2 - e.remaining * .2;
 	},
 	
 	onWheel: function(e) {
@@ -275,7 +271,7 @@ var SliderBar = ElementComponent.inherit({
 		
 		this.slider = slider;
 		
-		this.addListener('move', this.onMove, false);
+		this.addListener('move', this.onMove);
 	},
 	
 	onMove: function(e) {
@@ -289,8 +285,8 @@ var BuildingType = ElementComponent.inherit({
 		
 		this.cls = cls;
 		
-		this.addListener('active', this.onActive, false);
-		this.addListener('inactive', this.onInactive, false);
+		this.addListener('active', this.onActive);
+		this.addListener('inactive', this.onInactive);
 	},
 	
 	init: function(component) {
@@ -323,18 +319,14 @@ var Surface = DocumentComponent.inherit({
 		for (var className in buildings) {
 			this.buildings.addComponent(new BuildingType(buildings[className]));
 		}
-
-		window.addEventListener('resize', this.onResize, false);
 		
+		this.addListener('resize', this.onResize);
 		this.onResize();
 	},
 	
 	onResize: function(e) {
-		var width = window.innerWidth;
-		var height = window.innerHeight;
-		
-		this.map.resize(width - 208, height - 8);
-		this.buildings.resize(200, height);
+		this.map.resize(e.width - 208, e.heigth - 8);
+		this.buildings.resize(200, e.height);
 	}
 	
 });

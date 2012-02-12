@@ -8,7 +8,7 @@ Function.Empty = function() {};
 Function.prototype.inherit = function(objectDescriptor) {
 	var klass = function(objectToCast) {
 		if (!(this instanceof klass)) {
-			return objectToCast instanceof klass? objectToCast: null;
+			return proto.cast(objectToCast);
 		}
 		
 		if (eventHandlers) {
@@ -18,6 +18,14 @@ Function.prototype.inherit = function(objectDescriptor) {
 		
 		this.initialize.apply(this, arguments);
 	};
+	
+	if (objectDescriptor.initialize && !/\WsuperCall\s*\(/.test(objectDescriptor.initialize.toString())) {
+		var initialize = objectDescriptor.initialize;
+		objectDescriptor.initialize = function() {
+			this.superCall();
+			initialize.apply(this, arguments);
+		};
+	}
 	
 	var eventHandlers = klass.eventHandlers = {};
 	if (this.eventHandlers) {
@@ -41,13 +49,11 @@ Function.prototype.inherit = function(objectDescriptor) {
 						eventHandlers[name] = d; 
 					}
 				}
-				
-				delete objectDescriptor[name];
+			} else {
+				Object.defineProperty(proto, name, d);
 			}
 		}
 	}
-	
-	Object.defineProperties(proto, objectDescriptor);
 	
 	if (proto.initialize === undefined)
 		proto.initialize = Function.Empty;
@@ -73,6 +79,13 @@ Object.defineProperty(Object.prototype, 'superCall', {
 		} else {		
 			throw new ReferenceError("superCall can not be called outside of object inheritance");
 		}
+	}
+});
+
+Object.defineProperty(Object.prototype, 'cast', {
+	enumerable: false,
+	value: function(objectToCast) {
+		return objectToCast instanceof this.constructor? objectToCast: null;
 	}
 });
 

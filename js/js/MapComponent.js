@@ -1,22 +1,27 @@
 
 
 var CanvasComponent = ElementComponent.inherit({
+	initialize: function(element) {
+		this.superCall(element);
+		
+		if (element) {			
+			this.context = element.getContext('2d');
+			this.canvasComponent = this;
+		}
+	},
+	
 	init: function(parentComponent) {
 		this.superCall(parentComponent);
 		
-		var map = null;
-		if (parentComponent instanceof Map) {
-			map = parentComponent;
-		} else {
-			map = parentComponent.map;
-		}
-		
-		if (map && map != this.map) {
-			this.map = map;
-			this.context = map.context;
-			
-			for (var i = 0, c; c = this.components[i]; ++i) {
-				c.init(this);
+		if (this.canvasComponent != this) {
+			if (this.canvasComponent != parentComponent.canvasComponent) {				
+				this.canvasComponent = parentComponent.canvasComponent;
+				this.context = this.canvasComponent.context;
+				this.element = this.canvasComponent.element;
+				
+				for (var i = 0, c; c = this.components[i]; ++i) {
+					c.init(this);
+				}
 			}
 		}
 	},
@@ -31,30 +36,22 @@ var CanvasComponent = ElementComponent.inherit({
 			if (c.visible)
 				c.draw();
 	},
+	
 	rotate: function() {
 		for (var i = 0, c; c = this.components[i]; ++i)
 			if (c.visible)
 				c.rotate();
 	},
+	
 	zoom: function() {
 		for (var i = 0, c; c = this.components[i]; ++i)
 			c.zoom();
 	},
+	
 	animate: function() {
 		for (var i = 0, c; c = this.components[i]; ++i)
 			if (c.visible)
 				c.animate();
-	}
-});
-
-var RectBound = Object.inherit({
-	initialize: function(left, top, back, width, height, depth) {
-		this.left = left;
-		this.top = top;
-		this.back = back;
-		this.width = width;
-		this.height = height;
-		this.depth = depth;
 	}
 });
 
@@ -67,8 +64,8 @@ var MapStar = CanvasComponent.inherit({
 		for (var i = 0, p; p = star.planets[i]; ++i)
 			this.addComponent(new MapStarPlanet(p));
 		
-		this.addEventListener('over', this.over, false);
-		this.addEventListener('out', this.out, false);
+		this.addListener('over', this.over);
+		this.addListener('out', this.out);
 	},
 	
 	update: function() {
@@ -92,35 +89,35 @@ var MapStar = CanvasComponent.inherit({
 	},
 	
 	zoom: function() {
-		var relStar = this.star.position.sub(this.map.center);
+		var relStar = this.star.position.sub(this.canvasComponent.center);
 		
-		this.visible = relStar.abs() < this.map.radius;
+		this.visible = relStar.abs() < this.canvasComponent.radius;
 		if (this.visible) {
-			this.bounds = this.map.matrix.dot(relStar);
+			this.bounds = this.canvasComponent.matrix.dot(relStar);
 		} else {
 			this.bounds = null;
 		}
 	},
 	
 	rotate: function() {
-		this.bounds = this.map.transform(this.star.position);
+		this.bounds = this.canvasComponent.transform(this.star.position);
 	},
 	
 	draw: function() {
-		if (this.map.radius > 500) {
-			var dot = (this.bounds.z / this.map.width + .5) * this.map.zoomFactor;
+		if (this.canvasComponent.radius > 500) {
+			var dot = (this.bounds.z / this.canvasComponent.width + .5) * this.canvasComponent.zoomFactor;
 			
 			this.context.strokeStyle = 'white';
 			this.context.font = '12px Verdana';
 			
-//			if (this.map.radius < 1500) {				
+//			if (this.canvasComponent.radius < 1500) {				
 //				var gradient = this.context.createRadialGradient(this.bounds.x, this.bounds.y, dot, this.bounds.x, this.bounds.y, 0)
 //				gradient.addColorStop(0, '#000000');
 //				gradient.addColorStop(.4, '#770000');
 //				gradient.addColorStop(.95, '#ffffff');
 //				this.context.fillStyle = gradient;
 //			} else {
-				this.context.fillStyle = '#ff7777';
+				this.context.fillStyle = '#ffffff';
 //			}
 			
 			this.context.dot(this.bounds.x, this.bounds.y, dot);		
@@ -139,7 +136,7 @@ var MapStar = CanvasComponent.inherit({
 				p.draw(false);
 			}
 			
-			var size = .5 * this.map.zoomFactor;
+			var size = .5 * this.canvasComponent.zoomFactor;
 			this.context.drawImage(this.star.image, - size / 2, - size / 2, size, size);
 			
 			for (var i = 0, p; p = this.components[i]; ++i) {
@@ -166,8 +163,8 @@ var MapStarPlanet = CanvasComponent.inherit({
 	},
 	
 	draw: function(positive) {
-		var n = this.map.matrix.dot(this.planet.normal).normalize();
-		var pos = this.map.matrix.dot(this.position).normalize(this.planet.radius * this.map.zoomFactor);
+		var n = this.canvasComponent.matrix.dot(this.planet.normal).normalize();
+		var pos = this.canvasComponent.matrix.dot(this.position).normalize(this.planet.radius * this.canvasComponent.zoomFactor);
 	
 		var rotate = Math.atan2(n.x, n.y);
 		var scale = Math.acos(n.z);
@@ -177,20 +174,20 @@ var MapStarPlanet = CanvasComponent.inherit({
 		this.context.scale(1, -Math.cos(scale));
 	
 		this.context.beginPath();
-		this.context.lineWidth = .02 * this.map.zoomFactor;
+		this.context.lineWidth = .02 * this.canvasComponent.zoomFactor;
 		this.context.strokeStyle = 'white';
 		
 		if (positive)
-			this.context.arc(0, 0, this.planet.radius * this.map.zoomFactor, 0, Math.PI, false);
+			this.context.arc(0, 0, this.planet.radius * this.canvasComponent.zoomFactor, 0, Math.PI, false);
 		else
-			this.context.arc(0, 0, this.planet.radius * this.map.zoomFactor, Math.PI, Math.PI * 2, false);
+			this.context.arc(0, 0, this.planet.radius * this.canvasComponent.zoomFactor, Math.PI, Math.PI * 2, false);
 		
 		this.context.resetTransform();
 		this.context.stroke();
 		this.context.restore();
 		
 		if (pos.z > 0 && !positive || pos.z <= 0 && positive) {
-			var size = .2 * this.map.zoomFactor;
+			var size = .2 * this.canvasComponent.zoomFactor;
 			this.context.drawImage(this.planet.image, pos.x - size / 2, pos.y - size / 2, size, size);
 		}
 	}
@@ -208,49 +205,93 @@ var MapRoute = CanvasComponent.inherit({
 		}
 		this.addComponent(new MapRoutePoint(i, true));
 		
-		this.addEventListener('over', this.over, false);
-		this.addEventListener('beginMove', this.beginMove, false);
-		this.addEventListener('move', this.move, false);
-		this.addEventListener('endMove', this.endMove, false);
-	},
-	
-	over: function() {
-		var mousePosition = this.map.mousePosition;
+		this.focusTimer = Timeout.create(1000, this.onFocus);
+		this.focusIndex = null;
+		this.focusComponent = null;
 		
+		this.addListener('move', this.onMove);
+		this.addListener('endMove', this.onEndMove);
+	},
+	
+	updateRoutePoint: function(index, v) {
+		this.route.points[index] = v;
+		this.route.updateTangents();
 		
+		this.update();		
+		this.canvasComponent.draw();
 	},
 	
-	beginMove: function(e) {
-		e.preventDefault();
-	},
-	
-	move: function(e) {
+	onMove: function(e) {
+		var v;
 		if (e.target.point) {
 			var p = this.points[e.target.index];
-			var v = this.map.inverseTransform(new Vector(e.mouse.x, e.mouse.y, p.z));
-			this.route.points[e.target.index] = v;
-			this.route.updateTangents();
 			
-			this.update();
-			this.map.draw();
+			v = e.mouse.sub(this.canvasComponent.middle);
+			v = new Vector(v.x, v.y, p.z);
+			v = this.canvasComponent.inverseTransform(v);	
+			
+			var cmp = this.canvasComponent.getComponent(e.mouse);
+			console.log(cmp)
+			if (cmp instanceof MapStar) {
+				this.focusIndex = e.target.index;
+				this.focusComponent = cmp;
+				this.focusTimer.start();
+			} else {
+				this.focusTimer.stop();
+			}			
+		} else {
+			var newPoint = e.target;
+			var index = newPoint.index;
+			
+			v = this.route.getPoint(.5, index);
+			
+			this.setComponent(index * 2 + 1, new MapRoutePoint(index, false));
+			
+			newPoint.point = true;
+			newPoint.index = ++index;
+
+			this.setComponent(index * 2 + 1, new MapRoutePoint(index, false));
+			
+			for (var i = (index + 1) * 2, cmp; cmp = this.components[i]; ++i)
+				cmp.index++;
+			
+			this.route.add(index, v);
 		}
 		
+		this.updateRoutePoint(e.target.index, v);
 		
-		e.preventDefault();
+		e.stopPropagation();
 	},
 	
-	endMove: function(e) {
+	onFocus: function() {
+		var cmp = this.focusComponent;
+		var v = cmp.star.position;
+		if (this.focusIndex > 0 || this.focusIndex < this.route.points.length - 1) {
+			var s1 = this.route.points[this.focusIndex - 1];
+			var s2 = this.route.points[this.focusIndex + 1];
+			
+			var s = s2.sub(s1).normalize();
+			var v1 = v.sub(s1);
+			var v2 = s.scalar(v1.dot(s));
+			
+			v = v.add(v2.sub(v1).normalize(2));
+		}
+		
+		this.updateRoutePoint(this.focusIndex, v);
+	},
+	
+	onEndMove: function(e) {
 		if (e.target.point) {
 			this.route.updateLength();
 		}
 		
-		e.preventDefault();
+		this.focusTimer.stop();
 	},
 	
 	draw: function() {
 		this.context.save();
 		this.context.beginPath();
-		this.context.arc(0, 0, this.map.width/2, 0, Math.PI * 2, false);
+		this.context.arc(0, 0, this.canvasComponent.middle.x, 0, Math.PI * 2, false);
 		this.context.clip();
 		
 		for (var i = 0; i < this.points.length - 1; ++i) {
@@ -283,7 +324,7 @@ var MapRoute = CanvasComponent.inherit({
 		
 		this.context.fillStyle = 'blue';
 		for (var i = 0; i < 4; i++) {
-			var pos = this.map.transform(this.route.getPoint((i + 1) / 4));
+			var pos = this.canvasComponent.transform(this.route.getPoint((i + 1) / 4));
 			this.context.dot(pos.x, pos.y, 2);
 		}
 		
@@ -295,12 +336,12 @@ var MapRoute = CanvasComponent.inherit({
 	},
 	
 	rotate: function() {
-		this.points =  this.map.transformAll(this.route.points);
+		this.points =  this.canvasComponent.transformAll(this.route.points);
+		this.tangnts = this.canvasComponent.transformAll(this.route.tangents);
 		
-		this.tangnts = this.map.transformAll(this.route.tangents);
 		this.middlePoints = [];
 		for (var i = 0; i < this.points.length - 1; ++i) {
-			var middlePoint = this.map.transform(this.route.getPoint(.5, i));
+			var middlePoint = this.canvasComponent.transform(this.route.getPoint(.5, i));
 			
 			this.middlePoints.push(middlePoint);
 			this.components[i * 2].bounds = this.points[i];
@@ -327,7 +368,7 @@ var MapRoute = CanvasComponent.inherit({
 	},
 	
 	isLineVisible: function(start, target) {
-		var rad = this.map.width/2;
+		var rad = this.canvasComponent.middle.x;
 		
 		if (start.abs() < rad && target.abs() < rad){
 			return true;
@@ -372,16 +413,16 @@ var MapCoordinate = CanvasComponent.inherit({
 	},
 	
 	update: function() {
-		var wDiff = this.map.width * 1/10;
+		var wDiff = this.canvasComponent.width * 1/10;
 		
-		this.center = new Vector(this.map.width/2 - wDiff, -this.map.height/2 + wDiff, 0);
+		this.center = new Vector(this.canvasComponent.middle.x - wDiff, -this.canvasComponent.middle.y + wDiff, 0);
 		this.rotate();
 	},
 	
 	rotate: function() {
-		this.x = this.map.matrix.dot(new Vector(this.map.radius / 10, 0, 0));
-		this.y = this.map.matrix.dot(new Vector(0, this.map.radius / 10, 0));
-		this.z = this.map.matrix.dot(new Vector(0, 0, this.map.radius / 10));
+		this.x = this.canvasComponent.matrix.dot(new Vector(this.canvasComponent.radius / 10, 0, 0));
+		this.y = this.canvasComponent.matrix.dot(new Vector(0, this.canvasComponent.radius / 10, 0));
+		this.z = this.canvasComponent.matrix.dot(new Vector(0, 0, this.canvasComponent.radius / 10));
 	},
 	
 	draw: function() {

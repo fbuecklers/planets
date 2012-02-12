@@ -8,15 +8,13 @@ import javax.persistence.Table
 import scala.reflect.BeanProperty
 
 @Entity
-@Table( name="projects" )
+@Table(name = "projects")
 class Test() {
-    @Id
-    @GeneratedValue( strategy = GenerationType.IDENTITY )
-    @BeanProperty
-    var id:Integer = _
-    
-    @BeanProperty
-    var str:String = "test"
-    
-	//def this() = this(0)
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  var id: Integer = _
+
+  var str: String = "test"
+
+  //def this() = this(0)
 }

@@ -14,7 +14,7 @@ var Route = Object.inherit({
 	},
 	
 	add: function(index, vector) {
-		if (index instanceof Vector) {			
+		if (index instanceof Vector) {	
 			vector = index;
 			index = this.points.length;
 		}

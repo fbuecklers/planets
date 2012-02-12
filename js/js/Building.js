@@ -1,7 +1,6 @@
 var buildings = {};
 
 buildings.Building = Object.inherit({
-	
 	initialize: function(){
 		this.level = 1;
 		this.position = null;
@@ -14,7 +13,7 @@ buildings.Housing = buildings.Building.inherit({
 	name: 'Wohngebiet',
 	size: [[10,14,12],[15,20,10],[14,10,12]],
 	
-	initialize: function(){
+	initialize: function() {
 		this.level = 1;
 		this.maxworkers = 200;
 		this.radius = 10;
