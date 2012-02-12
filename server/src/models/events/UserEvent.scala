@@ -1,6 +1,8 @@
 package models.events
+import models.Player
 
-class UserEvent {
+class UserEvent extends Event {
 	var player:Player
-	var time:Time
+	
+	
 }

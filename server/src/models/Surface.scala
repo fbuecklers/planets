@@ -2,6 +2,8 @@ package models
 import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.Id
+import models.events.SurfaceEvent
+import scala.collection.mutable.Queue
 
 @Entity
 class Surface {
@@ -9,7 +11,10 @@ class Surface {
   @Id
   @GeneratedValue(strategy = javax.persistence.GenerationType.IDENTITY)
   var id:Integer = _
-
+  
+  var time:Int = _
+  var eventQueue:Queue[SurfaceEvent] = new Queue[SurfaceEvent]
+  
   var planet:Planet = _
   var height:Int = _
   var length:Int = _
