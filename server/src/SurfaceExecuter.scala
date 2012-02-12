@@ -6,7 +6,7 @@ import models.events.SurfaceEvent
 class SurfaceExecuter {
 	
 	var currentTime:Int
-	var surface:Surface
+	var surface:Surface 
 	
 	def run() {
 	  val timer:TimeComponent = new TimeComponent(surface)
