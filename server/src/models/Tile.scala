@@ -13,4 +13,6 @@ class Tile {
   var surface:Surface = _
   var building:Building = _
   var number:Int = _
+  var x:Int = _
+  var y:Int = _
 }

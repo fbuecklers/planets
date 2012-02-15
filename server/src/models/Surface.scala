@@ -2,8 +2,10 @@ package models
 import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.Id
+import javax.persistence.OneToMany
 import models.events.SurfaceEvent
 import scala.collection.mutable.Queue
+import building.Building
 
 @Entity
 class Surface {
@@ -16,8 +18,8 @@ class Surface {
   var eventQueue:Queue[SurfaceEvent] = new Queue[SurfaceEvent]
   
   var planet:Planet = _
-  var height:Int = _
-  var length:Int = _
+  var xLenght:Int = _
+  var yLenght:Int = _
   var jobless:Int = _
   
   //Lager
@@ -31,6 +33,9 @@ class Surface {
   
   var food:Int = _
   var luxus:List[Luxusg] = _
+  
+  @OneToMany(mappedBy="building")
+  var buildings:Set[Building] = _
   
   def shuffleworkers() {
     
