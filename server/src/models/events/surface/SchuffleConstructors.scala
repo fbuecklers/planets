@@ -1,4 +1,4 @@
-package surface
+package models.events.surface
 
 class SchuffleConstructors {
 

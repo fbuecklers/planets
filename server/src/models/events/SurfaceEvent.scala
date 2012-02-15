@@ -1,12 +1,15 @@
 package models.events
 import models.Surface
 
-class SurfaceEvent extends Event {
+abstract class SurfaceEvent extends Event {
 	
   var surface:Surface
   
-  def execute() {
+  def execute()
+  
+  def shuffleWorkers(){
     
   }
+ 
   
 }

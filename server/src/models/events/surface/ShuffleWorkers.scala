@@ -1,4 +1,4 @@
-package surface
+package models.events.surface
 
 import kernel.Worker
 import models.building.Building
